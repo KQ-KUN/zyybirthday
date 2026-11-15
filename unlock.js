@@ -47,13 +47,23 @@ form.addEventListener('submit',async(event)=>{
     nameInput.value='';birthdayInput.value='';name='';birthday='';
     const urls=hydrate(payload);
     try{
-      for(const path of ['vendor/maplibre-gl.js','app.js'])await new Promise((resolve,reject)=>{
+      for(const path of ['vendor/maplibre-gl.js','app.js']){
+        // 地图初始化时容器必须可见，否则画布会保持默认的 400×300 尺寸。
+        if(path==='app.js'){
+          document.getElementById('unlock-screen').hidden=true;
+          document.getElementById('app').hidden=false;
+          document.body.classList.add('album-unlocked');
+        }
+        await new Promise((resolve,reject)=>{
         const script=document.createElement('script');script.src=path;script.onload=resolve;script.onerror=reject;document.head.append(script);
-      });
-    }catch(e){urls.forEach(url=>URL.revokeObjectURL(url));delete window.memoryAlbum;throw e;}
-    document.getElementById('unlock-screen').hidden=true;
-    document.getElementById('app').hidden=false;
-    document.body.classList.add('album-unlocked');
+        });
+      }
+    }catch(e){
+      document.getElementById('unlock-screen').hidden=false;
+      document.getElementById('app').hidden=true;
+      document.body.classList.remove('album-unlocked');
+      urls.forEach(url=>URL.revokeObjectURL(url));delete window.memoryAlbum;throw e;
+    }
     document.getElementById('map-home').focus();
   }catch{error.textContent='相册暂时无法加载，请检查网络后再试。';}
   finally{busy=false;submit.disabled=false;submit.textContent=originalLabel;form.removeAttribute('aria-busy');name='';birthday='';}
