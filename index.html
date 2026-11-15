@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https://tiles.openfreemap.org; connect-src 'self' https://tiles.openfreemap.org; worker-src 'self' blob:; child-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f0e7">
+  <meta name="author" content="Kyrie Huang">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <meta name="referrer" content="no-referrer">
+  <title>给妈妈的地图相册</title>
+  <link rel="icon" href="assets/album-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="vendor/maplibre-gl.css">
+  <link rel="stylesheet" href="style.css">
+  <script src="unlock.js" type="module"></script>
+</head>
+<body>
+  <section id="unlock-screen" class="unlock-screen" aria-labelledby="unlock-title">
+    <div class="unlock-card"><span class="unlock-seal" aria-hidden="true">念</span><h1 id="unlock-title">地图相册。</h1>
+      <form id="unlock-form" autocomplete="off">
+        <label for="unlock-name">姓名或昵称</label><input id="unlock-name" type="text" maxlength="80" required autocomplete="off" autocapitalize="off" spellcheck="false">
+        <label for="unlock-birthday">生日月日</label><input id="unlock-birthday" type="text" inputmode="numeric" maxlength="12" placeholder="例如 0518" required autocomplete="off" aria-describedby="unlock-error">
+        <p id="unlock-error" class="unlock-error" role="status" aria-live="polite"></p><button id="unlock-submit" class="primary-button" type="submit">打开相册</button>
+      </form></div>
+  </section>
+  <main id="app" hidden>
+    <div id="map" aria-label="回忆地点地图"></div>
+    <div class="map-wash" aria-hidden="true"></div>
+    <header class="masthead">
+      <div class="title-group"><span class="seal" aria-hidden="true">念</span><div><p class="eyebrow">给妈妈</p><h1>地图相册<span class="title-dot">。</span></h1></div></div>
+      <div class="header-actions"><span id="demo-badge" class="demo-badge">演示版</span><button id="letter-open" class="round-button" aria-label="打开生日卡片" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></button></div>
+    </header>
+
+    <div id="map-notice" class="map-notice" role="status"><span class="loading-dot" aria-hidden="true"></span>正在展开地图</div>
+    <div class="map-tools" aria-label="地图操作">
+      <button id="map-home" class="tool-button" aria-label="查看所有地点"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H4a1 1 0 0 0-1 1v4m13-5h4a1 1 0 0 1 1 1v4M3 16v4a1 1 0 0 0 1 1h4m8 0h4a1 1 0 0 0 1-1v-4"/><circle cx="12" cy="12" r="3"/></svg></button>
+      <button id="map-pitch" class="tool-button text-tool" aria-label="切换到俯视地图" aria-pressed="true">3D</button>
+      <span class="tool-divider"></span>
+      <button id="map-zoom-in" class="tool-button zoom-button" aria-label="放大地图">＋</button>
+      <button id="map-zoom-out" class="tool-button zoom-button" aria-label="缩小地图">−</button>
+    </div>
+
+    <section id="place-card" class="place-card" aria-label="选中的地点" hidden>
+      <button id="place-photo-view" class="place-photo-view" aria-label="切换到低角度视角" aria-pressed="false"><img id="place-cover" alt="" width="110" height="92"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 16 9-9 9 9-9 4zM12 7v13"/></svg></button>
+      <button id="place-card-open" class="place-card-open"><span class="place-copy"><span id="place-region" class="eyebrow"></span><strong id="place-name"></strong><span id="place-count"></span></span><span class="card-arrow" aria-hidden="true">↗</span></button>
+      <button id="place-close" class="card-close" aria-label="收起地点卡片">×</button>
+    </section>
+
+    <section class="album-dock" aria-label="相册浏览">
+      <div class="dock-heading"><span id="place-summary">回忆地点</span><span id="tour-progress" class="tour-progress" hidden></span></div>
+      <div id="place-strip" class="place-strip" aria-label="地点列表"></div>
+      <div class="dock-actions"><button id="tour-button" class="primary-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 11 7-11 7z"/></svg><span>按顺序看</span></button><button id="gallery-open" class="secondary-button" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>全部照片</button></div>
+    </section>
+    <span id="live-status" class="sr-only" role="status" aria-live="polite"></span>
+    <footer class="map-credit"><a href="https://openfreemap.org/" target="_blank" rel="noopener">OpenFreeMap</a> · <a href="https://openmaptiles.org/" target="_blank" rel="noopener">© OpenMapTiles</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a> · <button id="credits-open">照片来源</button></footer>
+  </main>
+
+  <dialog id="photos-dialog" class="photos-dialog" aria-labelledby="photos-title">
+    <header class="dialog-header"><div><p id="photos-subtitle" class="eyebrow"></p><h2 id="photos-title">照片</h2></div><button class="round-button" data-close="photos-dialog" aria-label="关闭照片，回到地图">×</button></header>
+    <div id="photo-grid" class="photo-grid"></div>
+  </dialog>
+
+  <dialog id="viewer" class="viewer" aria-labelledby="viewer-caption">
+    <header class="viewer-header"><span id="viewer-counter"></span><button class="round-button" data-close="viewer" aria-label="关闭大图">×</button></header>
+    <div id="viewer-stage" class="viewer-stage"><img id="viewer-image" alt=""><p id="photo-error" hidden>这张照片暂时无法加载</p><button id="photo-prev" class="viewer-arrow prev" aria-label="上一张照片">‹</button><button id="photo-next" class="viewer-arrow next" aria-label="下一张照片">›</button></div>
+    <footer class="viewer-footer"><h2 id="viewer-caption"></h2><p id="viewer-note"></p><button id="viewer-map" class="viewer-map">在地图上看</button><div id="viewer-dots" class="viewer-dots" aria-label="选择照片"></div></footer>
+  </dialog>
+
+  <dialog id="letter-dialog" class="letter-dialog" aria-labelledby="letter-title"><button class="round-button letter-close" data-close="letter-dialog" aria-label="收起生日卡片">×</button><div class="letter-decoration" aria-hidden="true"><svg viewBox="0 0 120 120"><path d="M23 110Q57 78 71 15M46 81Q15 74 21 53Q44 51 48 77M59 58Q86 64 97 38Q69 34 59 55M68 34Q46 25 53 9Q72 10 71 29"/></svg></div><p class="eyebrow">一张生日卡片</p><h2 id="letter-title">妈妈，<br>生日快乐。</h2><p id="letter-message"></p><p id="letter-signature" class="letter-signature"></p><span class="letter-demo">卡片文字为暂拟，可替换</span></dialog>
+
+  <dialog id="credits-dialog" class="credits-dialog" aria-labelledby="credits-title"><header class="dialog-header"><h2 id="credits-title">照片来源</h2><button class="round-button" data-close="credits-dialog" aria-label="关闭照片来源">×</button></header><p>当前为风景示例，尚未放入家庭照片。</p><div id="credits-list"></div></dialog>
+  <noscript><div class="noscript-message">请开启浏览器的 JavaScript 后查看地图相册。</div></noscript>
+</body>
+</html>

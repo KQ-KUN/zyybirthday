@@ -1,0 +1,60 @@
+import {decryptAlbum,normalizeName,normalizeBirthday} from './crypto.mjs';
+
+const form=document.getElementById('unlock-form');
+const error=document.getElementById('unlock-error');
+const submit=document.getElementById('unlock-submit');
+const originalLabel=submit.textContent;
+let busy=false;
+let envelope;
+
+function hydrate(payload) {
+  if(!payload || payload.version!==1 || !payload.album || !Array.isArray(payload.album.places) || !payload.images || !Array.isArray(payload.credits))throw new Error('相册格式无效');
+  const urls=[];
+  for(const place of payload.album.places){
+    if(!Array.isArray(place.photos))throw new Error('照片列表无效');
+    for(const photo of place.photos){
+      const value=payload.images[photo.src];
+      if(typeof value!=='string' || !/^[A-Za-z0-9+/]*={0,2}$/.test(value))throw new Error('照片格式无效');
+      const bytes=Uint8Array.from(atob(value),c=>c.charCodeAt(0));
+      if(bytes[0]!==0xff || bytes[1]!==0xd8)throw new Error('照片格式无效');
+      const url=URL.createObjectURL(new Blob([bytes],{type:'image/jpeg'}));
+      urls.push(url);photo.src=url;
+    }
+  }
+  // 只在解锁成功后把相册内容放入本页内存，不写入浏览器持久存储。
+  window.memoryAlbum={album:payload.album,credits:payload.credits};
+  window.addEventListener('pagehide',()=>{urls.forEach(url=>URL.revokeObjectURL(url));delete window.memoryAlbum;},{once:true});
+  return urls;
+}
+
+form.addEventListener('submit',async(event)=>{
+  event.preventDefault();if(busy)return;
+  error.textContent='';
+  const nameInput=document.getElementById('unlock-name');
+  const birthdayInput=document.getElementById('unlock-birthday');
+  let name,birthday;
+  try{name=normalizeName(nameInput.value);birthday=normalizeBirthday(birthdayInput.value);}catch(e){error.textContent=e.message;return;}
+  if(!window.isSecureContext || !window.crypto?.subtle){error.textContent='请使用 HTTPS 网址和较新的浏览器打开。';return;}
+  busy=true;submit.disabled=true;submit.textContent='正在打开…';form.setAttribute('aria-busy','true');
+  try{
+    if(!envelope){
+      const response=await fetch('album.enc.json',{cache:'no-store',credentials:'omit'});
+      if(!response.ok)throw new Error('download');
+      envelope=await response.json();
+    }
+    let payload;
+    try{payload=await decryptAlbum(envelope,name,birthday);}catch{error.textContent='信息不匹配，请再试一次。';return;}
+    nameInput.value='';birthdayInput.value='';name='';birthday='';
+    const urls=hydrate(payload);
+    try{
+      for(const path of ['vendor/maplibre-gl.js','app.js'])await new Promise((resolve,reject)=>{
+        const script=document.createElement('script');script.src=path;script.onload=resolve;script.onerror=reject;document.head.append(script);
+      });
+    }catch(e){urls.forEach(url=>URL.revokeObjectURL(url));delete window.memoryAlbum;throw e;}
+    document.getElementById('unlock-screen').hidden=true;
+    document.getElementById('app').hidden=false;
+    document.body.classList.add('album-unlocked');
+    document.getElementById('map-home').focus();
+  }catch{error.textContent='相册暂时无法加载，请检查网络后再试。';}
+  finally{busy=false;submit.disabled=false;submit.textContent=originalLabel;form.removeAttribute('aria-busy');name='';birthday='';}
+});
