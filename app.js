@@ -1,6 +1,8 @@
+import {loadScript} from './network.js?v=20261115-2';
+
 /* 地图位置只用于整理回忆，不用于定位或导航。 */
 'use strict';
-(() => {
+export function startAlbum() {
   const $ = (id) => document.getElementById(id);
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const pinSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m4 17 5-5 4 4 3-3 5 5"/></svg>';
@@ -8,6 +10,7 @@
   let places = [];
   let map = null;
   let mapReady = false;
+  let mapLoading = false;
   let selectedId = null;
   let touring = false;
   let tourIndex = 0;
@@ -191,11 +194,18 @@
     clearTimeout(mapTimeout);
     document.body.classList.add('map-failed');
     $('map-notice').hidden = false; $('map-notice').classList.add('is-error');
-    $('map-notice').textContent = '地图暂时没有展开，仍可从下方地点查看照片。';
+    $('map-notice').replaceChildren(document.createTextNode('地图暂时无法连接，照片仍可查看。'));
+    const retry=document.createElement('button');retry.type='button';retry.textContent='重试地图';
+    retry.addEventListener('click',()=>{if(mapLoading)return;markers.forEach(marker=>marker.remove());markers.clear();if(map){map.remove();map=null;}mapReady=false;createMap();});
+    $('map-notice').append(retry);
   }
-  function createMap() {
-    if (!window.maplibregl) { mapUnavailable(); return; }
+  async function createMap() {
+    if(mapLoading)return;mapLoading=true;
+    $('map-notice').hidden=false;$('map-notice').classList.remove('is-error');
+    $('map-notice').textContent='正在展开地图';
     try {
+      await loadScript('vendor/maplibre-gl.js?v=20261115-2',{timeoutMs:12000});
+      if(!window.maplibregl)throw new Error('Map engine unavailable');
       map = new maplibregl.Map({container:'map',style:'map-style.json',center:[117.5,34],zoom:4.5,minZoom:2,maxZoom:18,pitch:35,bearing:0,attributionControl:false,renderWorldCopies:false,maxPitch:68,pixelRatio:Math.min(window.devicePixelRatio || 1,1.5),canvasContextAttributes:{antialias:false},maxTileCacheSize:192});
       map.getCanvas().setAttribute('aria-label','回忆地图，可用方向键平移，使用加减键缩放');
       mapTimeout = setTimeout(() => { if (!mapReady) mapUnavailable(); },18000);
@@ -225,8 +235,8 @@
       });
       map.on('error',() => { if(!mapReady && !map.isStyleLoaded())setStatus('正在等待地图资源'); });
       map.on('webglcontextlost',mapUnavailable);
-      window.addEventListener('resize',() => map.resize());
-    } catch { mapUnavailable(); }
+      window.addEventListener('resize',() => {if(map)map.resize();});
+    } catch { mapUnavailable(); } finally {mapLoading=false;}
   }
 
   function flattenPhotos(list) { return list.flatMap((place) => place.photos.map((photo,index) => ({...photo,place,index}))); }
@@ -315,7 +325,7 @@
   $('viewer-map').addEventListener('click',() => {const photo=activePhotos[photoIndex];closeDialog('viewer');closeDialog('photos-dialog');if(photo){stopTour();selectPlace(photo.place.id);$('place-card-open').focus();}});
   $('viewer-stage').addEventListener('touchstart',(event) => {touchStart=event.touches.length===1?{x:event.touches[0].clientX,y:event.touches[0].clientY}:null;},{passive:true});
   $('viewer-stage').addEventListener('touchend',(event) => {if(!touchStart || !event.changedTouches.length)return;const dx=event.changedTouches[0].clientX-touchStart.x,dy=event.changedTouches[0].clientY-touchStart.y;if(Math.abs(dx)>60 && Math.abs(dx)>Math.abs(dy)*1.5)nextPhoto(dx<0?1:-1);touchStart=null;},{passive:true});
-  async function initialize() {
+  function initialize() {
     try {
       album=validateAlbum(window.memoryAlbum.album);places=album.places;
       document.title=typeof album.title==='string'?album.title:'给妈妈的地图相册';
@@ -329,4 +339,4 @@
     } catch(error) {$('map-notice').textContent=error.message || '相册暂时无法加载，请稍后重试。';$('map-notice').classList.add('is-error');$('tour-button').disabled=true;$('gallery-open').disabled=true;}
   }
   initialize();
-})();
+}

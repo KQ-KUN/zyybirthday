@@ -1,4 +1,6 @@
-import {decryptAlbum,normalizeName,normalizeBirthday} from './crypto.js';
+import {decryptAlbum,normalizeName,normalizeBirthday} from './crypto.js?v=20261115-2';
+import {downloadJSON} from './network.js?v=20261115-2';
+import {startAlbum} from './app.js?v=20261115-2';
 
 const form=document.getElementById('unlock-form');
 const error=document.getElementById('unlock-error');
@@ -35,36 +37,32 @@ form.addEventListener('submit',async(event)=>{
   let name,birthday;
   try{name=normalizeName(nameInput.value);birthday=normalizeBirthday(birthdayInput.value);}catch(e){error.textContent=e.message;return;}
   if(!window.isSecureContext || !window.crypto?.subtle){error.textContent='请使用 HTTPS 网址和较新的浏览器打开。';return;}
-  busy=true;submit.disabled=true;submit.textContent='正在打开…';form.setAttribute('aria-busy','true');
+  busy=true;submit.disabled=true;submit.textContent='正在读取相册…';form.setAttribute('aria-busy','true');
   try{
-    if(!envelope){
-      const response=await fetch('album.enc.json',{cache:'no-store',credentials:'omit'});
-      if(!response.ok)throw new Error('download');
-      envelope=await response.json();
-    }
+    if(!envelope)envelope=await downloadJSON('album.enc.json?v=20261115-2',{
+      onProgress:(received,total)=>{
+        submit.textContent=total>0 && received<=total?`正在读取 ${Math.min(100,Math.round(received/total*100))}%`:`正在读取 ${Math.round(received/1024)} KB`;
+      }
+    });
+    submit.textContent='正在解锁…';
+    await new Promise(resolve=>requestAnimationFrame(resolve));
     let payload;
-    try{payload=await decryptAlbum(envelope,name,birthday);}catch{error.textContent='信息不匹配，请再试一次。';return;}
+    try{payload=await decryptAlbum(envelope,name,birthday);}catch{error.textContent='信息不匹配，请检查姓名和生日月日。';return;}
     nameInput.value='';birthdayInput.value='';name='';birthday='';
     const urls=hydrate(payload);
-    try{
-      for(const path of ['vendor/maplibre-gl.js','app.js']){
-        // 地图初始化时容器必须可见，否则画布会保持默认的 400×300 尺寸。
-        if(path==='app.js'){
-          document.getElementById('unlock-screen').hidden=true;
-          document.getElementById('app').hidden=false;
-          document.body.classList.add('album-unlocked');
-        }
-        await new Promise((resolve,reject)=>{
-        const script=document.createElement('script');script.src=path;script.onload=resolve;script.onerror=reject;document.head.append(script);
-        });
-      }
-    }catch(e){
+    document.getElementById('unlock-screen').hidden=true;
+    document.getElementById('app').hidden=false;
+    document.body.classList.add('album-unlocked');
+    try{startAlbum();}
+    catch(e){
       document.getElementById('unlock-screen').hidden=false;
       document.getElementById('app').hidden=true;
       document.body.classList.remove('album-unlocked');
       urls.forEach(url=>URL.revokeObjectURL(url));delete window.memoryAlbum;throw e;
     }
     document.getElementById('map-home').focus();
-  }catch{error.textContent='相册暂时无法加载，请检查网络后再试。';}
+  }catch(e){error.textContent=e.message?.includes('超时')?e.message:'相册加载失败，请检查网络后再次点击打开。';}
   finally{busy=false;submit.disabled=false;submit.textContent=originalLabel;form.removeAttribute('aria-busy');name='';birthday='';}
 });
+
+window.addEventListener('pageshow',event=>{if(event.persisted)location.reload();});
