@@ -1,6 +1,15 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {createLatestTask,createCameraMotion,mixCamera} from '../transitions.js';
+import {createLatestTask,createCameraMotion,mixCamera,regionMovement,mixFlight} from '../transitions.js';
+
+test('主动切换地区即使系统减少动效也会连续移镜，关闭开关后才立即定位',()=>{
+  const gentle=regionMovement({reducedMotion:true});assert(gentle.duration>=1800);assert.equal(gentle.essential,true);assert.equal(gentle.animate,true);
+  const off=regionMovement({enabled:false,reducedMotion:true});assert.equal(off.duration,0);assert.equal(off.animate,false);
+  const from={center:[3370,1560],zoom:7.5,pitch:46,bearing:0,padding:{top:0,bottom:0,left:0,right:0}};
+  const to={...from,center:[3420,1690]};
+  const middle=mixFlight(from,to,.5);assert(middle.zoom<7.5);assert(middle.center[0]>from.center[0]&&middle.center[0]<to.center[0]);
+  assert.deepEqual(mixFlight(from,to,0).center,from.center);assert.deepEqual(mixFlight(from,to,1).center,to.center);
+});
 
 test('快速切换地区时，只提交最新的照片，旧请求晚到不会覆盖',async()=>{
   const latest=createLatestTask(),commits=[];let finishFirst;

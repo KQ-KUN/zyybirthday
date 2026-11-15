@@ -65,21 +65,33 @@ export function cameraEase(progress){
   for(let i=0;i<14;i++){t=(low+high)/2;if(bezierCoordinate(t,.77,.175)<progress)low=t;else high=t;}
   return bezierCoordinate(t,0,1);
 }
+export function travelEase(progress){return (1-Math.cos(Math.PI*progress))/2;}
+export function regionMovement({enabled=true,reducedMotion=false}={}){
+  // 地区移镜是用户主动请求的交互；减少动效采用较轻的平移，不再把时长清零。
+  return {duration:enabled?(reducedMotion?2200:3000):0,animate:enabled,essential:true,easing:travelEase};
+}
 function copyCamera(value){return {...value,center:[...value.center],padding:{...value.padding}};}
 export function mixCamera(from,to,progress){
   const mix=(a,b)=>a+(b-a)*progress;
   return {center:from.center.map((value,index)=>mix(value,to.center[index])),zoom:mix(from.zoom,to.zoom),pitch:mix(from.pitch,to.pitch),bearing:mix(from.bearing,to.bearing),padding:Object.fromEntries(Object.keys(from.padding).map(key=>[key,mix(from.padding[key],to.padding[key])]))};
+}
+export function mixFlight(from,to,progress){
+  const camera=mixCamera(from,to,progress);
+  const degrees=Math.hypot(to.center[0]-from.center[0],to.center[1]-from.center[1])/4096*360;
+  const wide=Math.max(3.8,Math.min(from.zoom,to.zoom,Math.log2(360/Math.max(degrees,.2))-.7));
+  camera.zoom-=Math.max(0,Math.min(from.zoom,to.zoom)-wide)*Math.sin(Math.PI*progress);
+  return camera;
 }
 export function createCameraMotion(initial,paint,{requestFrame=callback=>requestAnimationFrame(callback),cancelFrame=id=>cancelAnimationFrame(id),now=()=>performance.now()}={}){
   let current=copyCamera(initial),frame=0,moving=false;
   function stop(){cancelFrame(frame);frame=0;moving=false;}
   return {
     get:()=>copyCamera(current),stop,isMoving:()=>moving,
-    to(target,duration=0){
+    to(target,duration=0,{easing=cameraEase,interpolate=mixCamera}={}){
       stop();const from=copyCamera(current),to=copyCamera(target),started=now();
       if(!duration){current=to;paint(current);return;}
       moving=true;
-      function tick(timestamp){const progress=Math.min(1,Math.max(0,(timestamp-started)/duration));current=mixCamera(from,to,cameraEase(progress));if(progress===1){current=to;moving=false;}paint(current);if(moving)frame=requestFrame(tick);}
+      function tick(timestamp){const progress=Math.min(1,Math.max(0,(timestamp-started)/duration));current=interpolate(from,to,easing(progress));if(progress===1){current=to;moving=false;}paint(current);if(moving)frame=requestFrame(tick);}
       frame=requestFrame(tick);
     }
   };

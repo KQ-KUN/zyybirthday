@@ -11,9 +11,9 @@
   <title>给妈妈的地图相册</title>
   <link rel="icon" href="assets/album-mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="vendor/maplibre-gl.css">
-  <link rel="stylesheet" href="style.css?v=20261115-5">
-  <link rel="stylesheet" href="editorial.css?v=20261115-5">
-  <script src="unlock.js?v=20261115-5" type="module"></script>
+  <link rel="stylesheet" href="style.css?v=20261115-6">
+  <link rel="stylesheet" href="atlas.css?v=20261115-6">
+  <script src="unlock.js?v=20261115-6" type="module"></script>
 </head>
 <body>
   <section id="unlock-screen" class="unlock-screen" aria-labelledby="unlock-title">
@@ -27,20 +27,22 @@
   <main id="app" hidden>
     <div id="map" aria-label="回忆地点地图"></div>
     <div class="map-wash" aria-hidden="true"></div>
-    <header class="masthead">
-      <div class="title-group"><div><p class="eyebrow">给妈妈</p><h1>地图相册</h1></div></div>
-      <div class="header-actions"><span id="demo-badge" class="demo-badge">演示版</span><button id="letter-open" class="round-button" aria-label="打开生日卡片" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></button></div>
-    </header>
-
     <div id="map-notice" class="map-notice" role="status"><span class="loading-dot" aria-hidden="true"></span>正在展开地图</div>
     <div class="map-tools" aria-label="地图操作">
       <button id="map-home" class="tool-button" aria-label="查看所有地点"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H4a1 1 0 0 0-1 1v4m13-5h4a1 1 0 0 1 1 1v4M3 16v4a1 1 0 0 0 1 1h4m8 0h4a1 1 0 0 0 1-1v-4"/><circle cx="12" cy="12" r="3"/></svg></button>
       <button id="map-pitch" class="tool-button text-tool" aria-label="切换到俯视地图" aria-pressed="true">3D</button>
-      <span class="tool-divider"></span>
+      <button id="map-motion" class="tool-button text-tool motion-toggle" aria-label="关闭地图移动动画" aria-pressed="true">平滑</button><span class="tool-divider"></span>
       <button id="map-zoom-in" class="tool-button zoom-button" aria-label="放大地图">＋</button>
       <button id="map-zoom-out" class="tool-button zoom-button" aria-label="缩小地图">−</button>
     </div>
 
+    <aside class="album-sidebar">
+    <header class="masthead">
+      <div class="title-group"><div><p class="eyebrow">给妈妈</p><h1>地图<br>相册</h1></div></div>
+      <div class="header-actions"><span id="demo-badge" class="demo-badge">演示版</span><button id="credits-open" class="round-button" aria-label="照片来源" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/></svg></button><button id="letter-open" class="round-button" aria-label="打开生日卡片" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></button></div>
+    </header>
+
+      <div class="album-content">
     <section id="place-card" class="place-card" aria-label="选中的地点" hidden>
       <button id="place-photo-view" class="place-photo-view" aria-label="切换到低角度视角" aria-pressed="false"><img id="place-cover" alt="" width="110" height="92"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 16 9-9 9 9-9 4zM12 7v13"/></svg></button>
       <button id="place-card-open" class="place-card-open"><span class="place-copy"><span id="place-region" class="eyebrow"></span><strong id="place-name"></strong><span id="place-count"></span></span><span id="place-index" class="place-index" aria-hidden="true"></span><svg class="card-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 19 5M5 5h14v14"/></svg></button>
@@ -50,10 +52,12 @@
     <section class="album-dock" aria-label="相册浏览">
       <div class="dock-heading"><span id="place-summary">回忆地点</span><span id="tour-progress" class="tour-progress" hidden></span></div>
       <div id="place-strip" class="place-strip" aria-label="地点列表"></div>
-      <div class="dock-actions"><button id="tour-button" class="primary-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 11 7-11 7z"/></svg><span>按顺序看</span></button><button id="gallery-open" class="secondary-button" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>全部照片</button></div>
+      <div class="dock-actions"><button id="tour-button" class="primary-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 11 7-11 7z"/></svg><span>按地点浏览</span></button><button id="gallery-open" class="secondary-button" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>全部照片</button></div>
     </section>
+      </div>
+    </aside>
     <span id="live-status" class="sr-only" role="status" aria-live="polite"></span>
-    <footer class="map-credit"><a href="https://datav.aliyun.com/portal/school/atlas/area_selector" target="_blank" rel="noopener">DataV</a> · <a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener">Natural Earth</a> · <button id="credits-open">照片来源</button></footer>
+    <footer class="map-credit"><a href="https://datav.aliyun.com/portal/school/atlas/area_selector" target="_blank" rel="noopener">DataV</a> · <a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener">Natural Earth</a></footer>
   </main>
 
   <dialog id="photos-dialog" class="photos-dialog" aria-labelledby="photos-title">
