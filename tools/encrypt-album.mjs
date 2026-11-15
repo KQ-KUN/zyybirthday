@@ -1,6 +1,6 @@
-import {readFile,writeFile} from 'node:fs/promises';
+import {readFile,writeFile,mkdir} from 'node:fs/promises';
 import {resolve,relative,sep,isAbsolute} from 'node:path';
-import {encryptAlbum,decryptAlbum} from '../crypto.js';
+import {encryptAlbum,decryptAlbum,deriveKey,sealPhoto,openPhoto} from '../crypto.js';
 
 const source=resolve(process.argv[2]??'../birthday-map/dist');
 const destination=resolve(process.argv[3]??'album.enc.json');
@@ -26,15 +26,34 @@ for(const place of album.places)for(const photo of place.photos){
   if(bytes[0]!==0xff || bytes[1]!==0xd8)throw new Error('Expected a JPEG photo');
   images[photo.src]=bytes.toString('base64');
 }
-const payload={version:1,album,credits,images};
+const paths=new Map();
+for(const place of album.places)for(const photo of place.photos){
+  if(!paths.has(photo.src))paths.set(photo.src,crypto.randomUUID());
+  photo.id=paths.get(photo.src);photo.src='sealed/'+photo.id+'.bin';
+}
+const payload={version:2,album,credits};
 const envelope=await encryptAlbum(payload,input.name,input.birthday);
+const key=await deriveKey(input.name,input.birthday,Uint8Array.from(Buffer.from(envelope.salt,'base64')),['encrypt','decrypt']);
 const verified=await decryptAlbum(envelope,input.name,input.birthday);
-if(Object.keys(verified.images).length!==Object.keys(images).length)throw new Error('Roundtrip verification failed');
+if(verified.album.places.length!==album.places.length)throw new Error('Roundtrip verification failed');
+await mkdir(resolve(destination,'../sealed'),{recursive:true});
+for(const [path,id] of paths){
+  const bytes=Uint8Array.from(Buffer.from(images[path],'base64'));
+  const sealed=await sealPhoto(bytes,key,id);
+  const opened=await openPhoto(sealed,key,id);
+  if(!Buffer.from(opened).equals(Buffer.from(bytes)))throw new Error('Photo verification failed');
+  await writeFile(resolve(destination,'../sealed/'+id+'.bin'),sealed);bytes.fill(0);opened.fill(0);
+}
 let rejected=false;
 try{await decryptAlbum(envelope,input.name+'-invalid',input.birthday);}catch{rejected=true;}
 if(!rejected)throw new Error('Incorrect credential was accepted');
 const serialized=JSON.stringify(envelope);
 if(serialized.includes(input.name))throw new Error('Name leaked into encryption envelope');
 await writeFile(destination,serialized);
+const htmlPath=resolve(destination,'../index.html');
+let html=await readFile(htmlPath,'utf8');
+html=html.replace(/\s*<script id="sealed-album"[\s\S]*?<\/script>/,'');
+html=html.replace('</body>','<script id="sealed-album" type="application/json">'+serialized+'</script>\n</body>');
+await writeFile(htmlPath,html);
 input.name='';input.birthday='';
 console.log(JSON.stringify({encrypted:true,photos:Object.keys(images).length,bytes:Buffer.byteLength(serialized),roundtrip:true,incorrectCredentialRejected:true}));

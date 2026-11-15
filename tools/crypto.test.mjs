@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {encryptAlbum,decryptAlbum,normalizeName,normalizeBirthday} from '../crypto.js';
+import {encryptAlbum,decryptAlbum,normalizeName,normalizeBirthday,deriveKey,sealPhoto,openPhoto} from '../crypto.js';
 
 test('姓名和月日规范化，并拒绝无效日期',()=>{
   assert.equal(normalizeName(' 测 试 '),'测试');
@@ -8,6 +8,17 @@ test('姓名和月日规范化，并拒绝无效日期',()=>{
   assert.equal(normalizeBirthday('05/18'),'0518');
   assert.throws(()=>normalizeBirthday('0230'));
   assert.throws(()=>normalizeBirthday('19900518'));
+});
+
+test('独立照片绑定相册密钥和照片编号，错误编号或篡改均被拒绝',async()=>{
+  const salt=crypto.getRandomValues(new Uint8Array(16));
+  const key=await deriveKey('测试昵称','0518',salt,['encrypt','decrypt']);
+  const bytes=new Uint8Array([255,216,1,2,3,255,217]);
+  const sealed=await sealPhoto(bytes,key,'photo-one');
+  assert.deepEqual(await openPhoto(sealed,key,'photo-one'),bytes);
+  await assert.rejects(()=>openPhoto(sealed,key,'photo-two'));
+  sealed[sealed.length-1]^=1;
+  await assert.rejects(()=>openPhoto(sealed,key,'photo-one'));
 });
 test('正确输入可解密；错误姓名、错误生日均不能读取内容',async()=>{
   const payload={version:1,album:{places:[{name:'隐私测试地点'}]},images:{example:'private-image-data'}};

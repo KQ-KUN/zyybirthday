@@ -1,4 +1,5 @@
-import {loadScript} from './network.js?v=20261115-2';
+import {createPaperMap,localStyle} from './paper-map.js?v=20261115-3';
+import {loadScript} from './network.js?v=20261115-3';
 
 /* 地图位置只用于整理回忆，不用于定位或导航。 */
 'use strict';
@@ -36,14 +37,14 @@ export function startAlbum() {
       if (!Array.isArray(c) || c.length !== 2 || !c.every(Number.isFinite) || Math.abs(c[0]) > 180 || Math.abs(c[1]) > 85) throw new Error('地点坐标超出范围');
       if (!Array.isArray(place.photos)) throw new Error('照片列表无效');
       for (const photo of place.photos) {
-        if (!record(photo) || typeof photo.src !== 'string' || !photo.src.startsWith('blob:'+location.origin+'/') || photo.src.includes('..') || typeof photo.alt !== 'string') throw new Error('照片路径或说明无效');
+        if (!record(photo) || typeof photo.src !== 'string' || !/^sealed\/[a-f0-9-]{36}\.bin$/.test(photo.src) || photo.src.includes('..') || typeof photo.alt !== 'string') throw new Error('照片路径或说明无效');
       }
     }
     return value;
   }
   function imageElement(photo, className) {
     const img = document.createElement('img');
-    img.src = photo.src; img.alt = photo.alt; img.loading = 'lazy'; img.decoding = 'async';
+    window.memoryAlbum.loadPhoto(photo).then(url=>{if(img.isConnected)img.src=url;}).catch(()=>{img.alt='照片暂时无法加载';}); img.alt = photo.alt; img.loading = 'lazy'; img.decoding = 'async';
     if (className) img.className = className;
     img.addEventListener('error', () => { img.alt = '照片暂时无法加载'; img.classList.add('image-unavailable'); });
     return img;
@@ -72,7 +73,7 @@ export function startAlbum() {
       const name = document.createElement('strong'); name.textContent = place.name; button.append(name);
       button.addEventListener('click', () => {
         stopTour();
-        if (selectedId === place.id && mapReady && map.getZoom() >= 9) setPhotoPerspective(place.id);
+        if (selectedId === place.id && mapReady && map.getZoom() >= 7) setPhotoPerspective(place.id);
         else selectPlace(place.id);
       });
       $('place-strip').append(button);
@@ -90,7 +91,7 @@ export function startAlbum() {
   }
 
   function updatePerspectiveControls() {
-    const near = mapReady && map.getZoom() >= 9;
+    const near = mapReady && map.getZoom() >= 7;
     $('place-photo-view').setAttribute('aria-pressed',String(photoPerspective));
     $('place-photo-view').setAttribute('aria-label',photoPerspective ? '恢复斜俯视角' : '切换到低角度视角');
     markers.forEach((marker,id) => {
@@ -116,7 +117,7 @@ export function startAlbum() {
     $('map-pitch').textContent = '3D';
     updatePerspectiveControls();
     // 保持地点与当前方位，单独改变观察角度；再次点击可反向过渡。
-    map.easeTo({center:place.coordinates,zoom:Math.max(11.5,map.getZoom()),pitch:low ? 68 : 46,padding:cameraPadding(),duration:reducedMotion ? 0 : 900,essential:false});
+    map.easeTo({center:place.coordinates,zoom:Math.max(7.5,map.getZoom()),pitch:low ? 68 : 46,padding:cameraPadding(),duration:reducedMotion ? 0 : 900,essential:false});
     setStatus(low ? '已切换低角度视角，再次点击照片可恢复' : '已恢复斜俯视角');
   }
 
@@ -133,11 +134,11 @@ export function startAlbum() {
     $('place-card-open').setAttribute('aria-label', `查看${place.name}的 ${place.photos.length} 张照片`);
     $('place-cover').hidden = !place.photos[0];
     $('place-photo-view').hidden = !place.photos[0];
-    if (place.photos[0]) $('place-cover').src = place.photos[0].src;
+    if (place.photos[0]) {const id=place.id;window.memoryAlbum.loadPhoto(place.photos[0]).then(url=>{if(selectedId===id)$('place-cover').src=url;}).catch(()=>{});}
     document.querySelectorAll('.place-tile').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.id === id)));
     updatePerspectiveControls();
     if (mapReady && options.fly !== false) {
-      const zoom = options.overview ? 6.2 : 11.5;
+      const zoom = options.overview ? 6.2 : 7.5;
       const zoomSteps = Math.abs(map.getZoom() - zoom);
       // 跨城市用较平缓的飞行路径，近距离重定位避免先拉远再拉近。
       const camera = {center:place.coordinates,zoom,pitch:$('map-pitch').getAttribute('aria-pressed') === 'true' ? 46 : 0,bearing:map.getBearing(),padding:cameraPadding(),duration:reducedMotion ? 0 : Math.min(3000,Math.max(1100,zoomSteps * 360)),essential:false};
@@ -150,6 +151,7 @@ export function startAlbum() {
 
   function fitAll() {
     if (!places.length || !mapReady) return;
+    if(map.isPaper){map.fitPlaces(places,{padding:cameraPadding(true),maxZoom:6.2,pitch:35,duration:reducedMotion?0:1000});return;}
     const bounds = new maplibregl.LngLatBounds(); places.forEach((p) => bounds.extend(p.coordinates));
     map.stop();
     photoPerspective = false;
@@ -158,7 +160,7 @@ export function startAlbum() {
   }
 
   function renderMarkers() {
-    if (!mapReady || !map.getSource('memories')) return;
+    if (!mapReady || map.isPaper || !map.getSource('memories')) return;
     const seen = new Set();
     for (const feature of map.querySourceFeatures('memories')) {
       if (feature.properties.cluster) continue;
@@ -174,7 +176,7 @@ export function startAlbum() {
         button.setAttribute('aria-label', `打开${place.name}的照片`); button.setAttribute('aria-pressed', String(selectedId === id));
         button.addEventListener('click', (event) => {
           event.stopPropagation(); stopTour();
-          if (selectedId === id && map.getZoom() >= 9) setPhotoPerspective(id);
+          if (selectedId === id && map.getZoom() >= 7) setPhotoPerspective(id);
           else selectPlace(id);
         });
         markers.set(id,new maplibregl.Marker({element:button,anchor:'bottom',offset:[0,16]}).setLngLat(place.coordinates).addTo(map));
@@ -192,29 +194,29 @@ export function startAlbum() {
 
   function mapUnavailable() {
     clearTimeout(mapTimeout);
-    document.body.classList.add('map-failed');
-    $('map-notice').hidden = false; $('map-notice').classList.add('is-error');
-    $('map-notice').replaceChildren(document.createTextNode('地图暂时无法连接，照片仍可查看。'));
-    const retry=document.createElement('button');retry.type='button';retry.textContent='重试地图';
-    retry.addEventListener('click',()=>{if(mapLoading)return;markers.forEach(marker=>marker.remove());markers.clear();if(map){map.remove();map=null;}mapReady=false;createMap();});
-    $('map-notice').append(retry);
+    if(map?.isPaper){$('map-notice').hidden=true;return;}
+    if(map){map.remove();map=null;}
+    map=createPaperMap($('map'),places,id=>{if(selectedId===id && map.getZoom()>=7)setPhotoPerspective(id);else selectPlace(id);},updatePerspectiveControls);
+    mapReady=true;$('map-notice').hidden=true;
+    if(selectedId)selectPlace(selectedId);else fitAll();
   }
   async function createMap() {
     if(mapLoading)return;mapLoading=true;
     $('map-notice').hidden=false;$('map-notice').classList.remove('is-error');
     $('map-notice').textContent='正在展开地图';
+    const paper=map;let engineReady=false;
     try {
-      await loadScript('vendor/maplibre-gl.js?v=20261115-2',{timeoutMs:12000});
+      await loadScript('vendor/maplibre-gl.js?v=20261115-3',{timeoutMs:8000});
       if(!window.maplibregl)throw new Error('Map engine unavailable');
-      map = new maplibregl.Map({container:'map',style:'map-style.json',center:[117.5,34],zoom:4.5,minZoom:2,maxZoom:18,pitch:35,bearing:0,attributionControl:false,renderWorldCopies:false,maxPitch:68,pixelRatio:Math.min(window.devicePixelRatio || 1,1.5),canvasContextAttributes:{antialias:false},maxTileCacheSize:192});
+      map = new maplibregl.Map({container:'map',style:localStyle,center:[117.5,34],zoom:4.5,minZoom:2,maxZoom:8.5,pitch:35,bearing:0,attributionControl:false,renderWorldCopies:false,maxPitch:68,pixelRatio:Math.min(window.devicePixelRatio || 1,1.5),canvasContextAttributes:{antialias:false},maxTileCacheSize:192});
       map.getCanvas().setAttribute('aria-label','回忆地图，可用方向键平移，使用加减键缩放');
-      mapTimeout = setTimeout(() => { if (!mapReady) mapUnavailable(); },18000);
+      mapTimeout=setTimeout(()=>{if(!engineReady){if(map && !map.isPaper)map.remove();map=paper;mapReady=true;$('map-notice').hidden=true;}},10000);
       map.on('load',() => {
-        mapReady = true; clearTimeout(mapTimeout);
+        engineReady=true;if(paper?.isPaper)paper.remove();mapReady = true; clearTimeout(mapTimeout);
         $('map-notice').hidden = true; document.body.classList.remove('map-failed');
-        map.addSource('memories',{type:'geojson',data:{type:'FeatureCollection',features:places.map((p) => ({type:'Feature',geometry:{type:'Point',coordinates:p.coordinates},properties:{id:p.id}}))},cluster:true,clusterMaxZoom:14,clusterRadius:45});
+        map.addSource('memories',{type:'geojson',data:{type:'FeatureCollection',features:places.map((p) => ({type:'Feature',geometry:{type:'Point',coordinates:p.coordinates},properties:{id:p.id}}))},cluster:false});
         map.addLayer({id:'memory-clusters',type:'circle',source:'memories',filter:['has','point_count'],paint:{'circle-color':'#fcfaf4','circle-radius':22,'circle-stroke-color':'#62745b','circle-stroke-width':1.5}});
-        map.addLayer({id:'memory-cluster-count',type:'symbol',source:'memories',filter:['has','point_count'],layout:{'text-field':['get','point_count_abbreviated'],'text-size':13},paint:{'text-color':'#34483e'}});
+        /* 离线底图不加载远程字库。 */
         map.addLayer({id:'memory-points',type:'circle',source:'memories',filter:['!',['has','point_count']],paint:{'circle-radius':1,'circle-opacity':0}});
         map.on('click','memory-clusters',async (event) => {
           const feature=event.features[0];
@@ -236,7 +238,7 @@ export function startAlbum() {
       map.on('error',() => { if(!mapReady && !map.isStyleLoaded())setStatus('正在等待地图资源'); });
       map.on('webglcontextlost',mapUnavailable);
       window.addEventListener('resize',() => {if(map)map.resize();});
-    } catch { mapUnavailable(); } finally {mapLoading=false;}
+    } catch {if(paper?.isPaper){map=paper;mapReady=true;$('map-notice').hidden=true;}else mapUnavailable();} finally {mapLoading=false;}
   }
 
   function flattenPhotos(list) { return list.flatMap((place) => place.photos.map((photo,index) => ({...photo,place,index}))); }
@@ -264,7 +266,7 @@ export function startAlbum() {
   function renderViewer() {
     const photo=activePhotos[photoIndex]; if(!photo)return;
     $('photo-error').hidden=true;$('viewer-image').hidden=false;
-    $('viewer-image').src=photo.src;$('viewer-image').alt=photo.alt;
+    window.memoryAlbum.loadPhoto(photo).then(url=>{if(activePhotos[photoIndex]?.id===photo.id)$('viewer-image').src=url;}).catch(()=>{$('photo-error').hidden=false;});$('viewer-image').alt=photo.alt;
     $('viewer-caption').textContent=photo.place.name;
     $('viewer-note').textContent=photo.caption || photo.place.note || photo.place.region;
     $('viewer-counter').textContent=`${String(photoIndex+1).padStart(2,'0')} / ${String(activePhotos.length).padStart(2,'0')}`;
@@ -335,6 +337,7 @@ export function startAlbum() {
       if(!places.length){$('tour-button').disabled=true;$('map-notice').textContent='回忆地点还在准备中';return;}
       const hash=new URLSearchParams(location.hash.slice(1));const place=places.find((p) => p.id===hash.get('place'));
       if(place){selectPlace(place.id,{fly:false,hash:false});const index=Number(hash.get('photo'))-1;if(hash.has('photo') && Number.isInteger(index) && index>=0 && index<place.photos.length)openViewer(flattenPhotos([place]),index);}
+      mapUnavailable();
       createMap();
     } catch(error) {$('map-notice').textContent=error.message || '相册暂时无法加载，请稍后重试。';$('map-notice').classList.add('is-error');$('tour-button').disabled=true;$('gallery-open').disabled=true;}
   }

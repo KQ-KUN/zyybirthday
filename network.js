@@ -1,5 +1,5 @@
 // 总超时覆盖响应正文停滞，避免解锁一直处于等待状态。
-export async function downloadJSON(url,{timeoutMs=30000,onProgress=()=>{},fetchImpl=fetch,maxBytes=100*1024*1024}={}) {
+export async function downloadBytes(url,{timeoutMs=30000,onProgress=()=>{},fetchImpl=fetch,maxBytes=100*1024*1024}={}) {
   const controller=new AbortController();
   let timer;
   const timeout=new Promise((_,reject)=>{
@@ -10,7 +10,7 @@ export async function downloadJSON(url,{timeoutMs=30000,onProgress=()=>{},fetchI
     if(!response.ok)throw new Error('相册下载失败，请检查网络后重试。');
     const total=Number(response.headers.get('content-length'))||0;
     if(total>maxBytes)throw new Error('相册文件过大。');
-    if(!response.body?.getReader){const value=await response.text();if(value.length>maxBytes)throw new Error('相册文件过大。');return JSON.parse(value);}
+    if(!response.body?.getReader){const value=new Uint8Array(await response.arrayBuffer());if(value.length>maxBytes)throw new Error('相册文件过大。');return value;}
     const reader=response.body.getReader(),chunks=[];
     let received=0;
     try {
@@ -22,7 +22,7 @@ export async function downloadJSON(url,{timeoutMs=30000,onProgress=()=>{},fetchI
       }
       const bytes=new Uint8Array(received);let offset=0;
       for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}
-      return JSON.parse(new TextDecoder().decode(bytes));
+      return bytes;
     } finally {reader.releaseLock();}
   })();
   try{return await Promise.race([request,timeout]);}
@@ -45,3 +45,5 @@ export function loadScript(url,{timeoutMs=12000}={}) {
   });
   scripts.set(url,promise);return promise;
 }
+
+export async function downloadJSON(url,options){return JSON.parse(new TextDecoder().decode(await downloadBytes(url,options)));}

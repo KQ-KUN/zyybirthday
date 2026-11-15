@@ -29,7 +29,7 @@ function fromBase64(value) {
   if(typeof value!=='string' || !/^[A-Za-z0-9+/]*={0,2}$/.test(value) || value.length%4)throw new Error('加密文件格式无效');
   return Uint8Array.from(atob(value),c=>c.charCodeAt(0));
 }
-async function deriveKey(name,birthday,salt,usages) {
+export async function deriveKey(name,birthday,salt,usages) {
   const input=encoder.encode(normalizeName(name)+'\n'+normalizeBirthday(birthday));
   try {
     const material=await crypto.subtle.importKey('raw',input,'PBKDF2',false,['deriveKey']);
@@ -53,4 +53,19 @@ export async function decryptAlbum(envelope,name,birthday) {
   const key=await deriveKey(name,birthday,salt,['decrypt']);
   const plaintext=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv,additionalData:aad,tagLength:128},key,ciphertext));
   try {return JSON.parse(decoder.decode(plaintext));}finally{plaintext.fill(0);}
+}
+
+export async function openAlbum(envelope,name,birthday) {
+  const payload=await decryptAlbum(envelope,name,birthday);
+  const key=await deriveKey(name,birthday,fromBase64(envelope.salt),['decrypt']);
+  return {payload,key};
+}
+export async function sealPhoto(bytes,key,id) {
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const ciphertext=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv,additionalData:encoder.encode('photo:'+id)},key,bytes));
+  const result=new Uint8Array(12+ciphertext.length);result.set(iv);result.set(ciphertext,12);return result;
+}
+export async function openPhoto(bytes,key,id) {
+  if(bytes.length<28)throw new Error('照片文件不完整');
+  return new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:bytes.slice(0,12),additionalData:encoder.encode('photo:'+id)},key,bytes.slice(12)));
 }

@@ -1,30 +1,33 @@
-import {decryptAlbum,normalizeName,normalizeBirthday} from './crypto.js?v=20261115-2';
-import {downloadJSON} from './network.js?v=20261115-2';
-import {startAlbum} from './app.js?v=20261115-2';
+import {openAlbum,openPhoto,normalizeName,normalizeBirthday} from './crypto.js?v=20261115-3';
+import {downloadBytes} from './network.js?v=20261115-3';
+import {startAlbum} from './app.js?v=20261115-3';
 
 const form=document.getElementById('unlock-form');
 const error=document.getElementById('unlock-error');
 const submit=document.getElementById('unlock-submit');
 const originalLabel=submit.textContent;
 let busy=false;
-let envelope;
+const envelope=JSON.parse(document.getElementById('sealed-album').textContent);
+submit.disabled=false;submit.textContent=originalLabel;
 
-function hydrate(payload) {
-  if(!payload || payload.version!==1 || !payload.album || !Array.isArray(payload.album.places) || !payload.images || !Array.isArray(payload.credits))throw new Error('相册格式无效');
-  const urls=[];
-  for(const place of payload.album.places){
-    if(!Array.isArray(place.photos))throw new Error('照片列表无效');
-    for(const photo of place.photos){
-      const value=payload.images[photo.src];
-      if(typeof value!=='string' || !/^[A-Za-z0-9+/]*={0,2}$/.test(value))throw new Error('照片格式无效');
-      const bytes=Uint8Array.from(atob(value),c=>c.charCodeAt(0));
-      if(bytes[0]!==0xff || bytes[1]!==0xd8)throw new Error('照片格式无效');
-      const url=URL.createObjectURL(new Blob([bytes],{type:'image/jpeg'}));
-      urls.push(url);photo.src=url;
-    }
+function hydrate(payload,key) {
+  if(!payload || payload.version!==2 || !payload.album || !Array.isArray(payload.album.places) || !Array.isArray(payload.credits))throw new Error('相册格式无效');
+  const photos=new Map(),urls=[];
+  async function loadPhoto(photo){
+    if(!/^sealed\/[a-f0-9-]{36}\.bin$/.test(photo.src) || !/^[a-f0-9-]{36}$/.test(photo.id))throw new Error('照片路径无效');
+    if(photos.has(photo.id))return photos.get(photo.id);
+    const loading=(async()=>{
+      let bytes;
+      for(let attempt=0;attempt<2;attempt++){
+        try{bytes=await downloadBytes(photo.src,{timeoutMs:25000});break;}
+        catch(e){if(attempt===1)throw e;await new Promise(resolve=>setTimeout(resolve,400));}
+      }
+      const plaintext=await openPhoto(bytes,key,photo.id);
+      const url=URL.createObjectURL(new Blob([plaintext],{type:'image/jpeg'}));plaintext.fill(0);urls.push(url);return url;
+    })();
+    photos.set(photo.id,loading);loading.catch(()=>photos.delete(photo.id));return loading;
   }
-  // 只在解锁成功后把相册内容放入本页内存，不写入浏览器持久存储。
-  window.memoryAlbum={album:payload.album,credits:payload.credits};
+  window.memoryAlbum={album:payload.album,credits:payload.credits,loadPhoto};
   window.addEventListener('pagehide',()=>{urls.forEach(url=>URL.revokeObjectURL(url));delete window.memoryAlbum;},{once:true});
   return urls;
 }
@@ -39,17 +42,12 @@ form.addEventListener('submit',async(event)=>{
   if(!window.isSecureContext || !window.crypto?.subtle){error.textContent='请使用 HTTPS 网址和较新的浏览器打开。';return;}
   busy=true;submit.disabled=true;submit.textContent='正在读取相册…';form.setAttribute('aria-busy','true');
   try{
-    if(!envelope)envelope=await downloadJSON('album.enc.json?v=20261115-2',{
-      onProgress:(received,total)=>{
-        submit.textContent=total>0 && received<=total?`正在读取 ${Math.min(100,Math.round(received/total*100))}%`:`正在读取 ${Math.round(received/1024)} KB`;
-      }
-    });
     submit.textContent='正在解锁…';
     await new Promise(resolve=>requestAnimationFrame(resolve));
-    let payload;
-    try{payload=await decryptAlbum(envelope,name,birthday);}catch{error.textContent='信息不匹配，请检查姓名和生日月日。';return;}
+    let payload,key;
+    try{({payload,key}=await openAlbum(envelope,name,birthday));}catch{error.textContent='信息不匹配，请检查姓名和生日月日。';return;}
     nameInput.value='';birthdayInput.value='';name='';birthday='';
-    const urls=hydrate(payload);
+    const urls=hydrate(payload,key);
     document.getElementById('unlock-screen').hidden=true;
     document.getElementById('app').hidden=false;
     document.body.classList.add('album-unlocked');
