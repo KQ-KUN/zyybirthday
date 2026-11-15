@@ -1,9 +1,9 @@
-import {layoutPins} from './pin-layout.js?v=20261115-11';
-import {administrativeAreas,administrativeLabels} from './administrative-areas.js?v=20261115-11';
-import {pushpinSvg} from './pushpin.js?v=20261115-11';
-import {regionLabels} from './region-labels.js?v=20261115-11';
-import {createCameraMotion,mixCamera,mixFlight,cameraEase} from './transitions.js?v=20261115-11';
-import {geography,land} from './geography.js?v=20261115-11';
+import {layoutPins} from './pin-layout.js?v=20261115-12';
+import {administrativeAreas,administrativeLabels} from './administrative-areas.js?v=20261115-12';
+import {pushpinSvg} from './pushpin.js?v=20261115-12';
+import {regionLabels} from './region-labels.js?v=20261115-12';
+import {createCameraMotion,mixCamera,mixFlight,cameraEase} from './transitions.js?v=20261115-12';
+import {geography,land} from './geography.js?v=20261115-12';
 
 export function project([longitude,latitude]) {
   const radians=Math.max(-85,Math.min(85,latitude))*Math.PI/180;
@@ -45,13 +45,17 @@ export function createPaperMap(container,places,onSelect,onMove) {
     const line=document.createElementNS(svg.namespaceURI,'line');leaders.append(line);
     return {button,point,placeId:place.id,offset:[0,0],line};
   });
-  function screenPoint(coordinates){const point=project(coordinates),scale=2**zoom/8;return {x:surface.clientWidth/2+(padding.left-padding.right)/2+(point[0]-center[0])*scale,y:surface.clientHeight/2+(padding.top-padding.bottom)/2+(point[1]-center[1])*scale};}
+  function tiltedPoint(x,y){
+    const radians=pitch*Math.PI/180,factor=1600/(1600-y*Math.sin(radians));
+    return {x:surface.clientWidth/2+((padding.left-padding.right)/2+x)*factor,y:surface.clientHeight/2+((padding.top-padding.bottom)/2+y*Math.cos(radians))*factor,factor};
+  }
+  function screenPoint(coordinates){const point=project(coordinates),scale=2**zoom/8;return tiltedPoint((point[0]-center[0])*scale,(point[1]-center[1])*scale);}
   function refreshPins(){
     const layout=layoutPins(places,screenPoint,{selectedId:selectedPin,width:surface.clientWidth,height:surface.clientHeight,top:padding.top,bottom:padding.bottom,labelsVisible:zoom>=5.4});
     for(const pin of pins){pin.offset=layout.get(pin.placeId).offset;pin.button.classList.toggle('show-label',layout.get(pin.placeId).showLabel);}
   }
   function draw(duration=0){
-    container.dataset.view='2d';container.dataset.zoom=zoom.toFixed(2);container.dataset.pitch=String(pitch);
+    container.dataset.view=pitch>1?'tilted':'2d';container.dataset.zoom=zoom.toFixed(2);container.dataset.pitch=String(pitch);
     if(!motion?.isMoving()&&!drag)refreshPins();
     divisionGroups.city.style.display=zoom>=5?'':'none';divisionGroups.county.style.display=zoom>=7.2?'':'none';
     const scale=2**zoom/8;
@@ -66,14 +70,15 @@ export function createPaperMap(container,places,onSelect,onMove) {
     shapes.style.transform=`translate(${width/2}px,${height/2}px) scale(${scale}) translate(${-center[0]}px,${-center[1]}px)`;
     for(const {button,point,offset,line} of pins){
       const x=(point[0]-center[0])*scale,y=(point[1]-center[1])*scale;
-      button.style.left=(width/2+x+offset[0])+'px';button.style.top=(height/2+y+offset[1])+'px';button.style.transform='translate(-50%,-100%)';
-      const sx=surface.clientWidth/2+(padding.left-padding.right)/2+x,sy=surface.clientHeight/2+(padding.top-padding.bottom)/2+y;
-      line.setAttribute('x1',sx);line.setAttribute('y1',sy);line.setAttribute('x2',sx+offset[0]);line.setAttribute('y2',sy+offset[1]);
+      const origin=tiltedPoint(x,y),dx=offset[0]/origin.factor,dy=offset[1]/(origin.factor*Math.max(.3,Math.cos(pitch*Math.PI/180)));
+      button.style.left=(width/2+x+dx)+'px';button.style.top=(height/2+y+dy)+'px';button.style.transform=`translate(-50%,-100%) rotateX(${-pitch}deg)`;button.style.transformOrigin='50% 100%';
+      const end=tiltedPoint(x+dx,y+dy);
+      line.setAttribute('x1',origin.x);line.setAttribute('y1',origin.y);line.setAttribute('x2',end.x);line.setAttribute('y2',end.y);
     }
     const occupied=[];
     for(const {element,point,level} of labelNodes){
       const x=width/2+(point[0]-center[0])*scale,y=height/2+(point[1]-center[1])*scale;
-      element.style.left=x+'px';element.style.top=y+'px';element.style.transform='translate(-50%,-50%)';
+      element.style.left=x+'px';element.style.top=y+'px';element.style.transform=`translate(-50%,-50%) rotateX(${-pitch}deg)`;
       const eligible=level==='province'?zoom>=1.5&&zoom<5.4:level==='city'?zoom>=5&&zoom<8.3:zoom>=7.2;
       const overlap=occupied.some(p=>Math.abs(p.x-x)<52&&Math.abs(p.y-y)<22);
       element.hidden=!(eligible&&!overlap);if(eligible&&!overlap)occupied.push({x,y});
