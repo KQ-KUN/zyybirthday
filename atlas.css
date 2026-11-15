@@ -243,3 +243,5 @@ button:focus-visible,a:focus-visible{outline-color:var(--forest)}.album-sidebar 
 .viewer-footer{display:none}
 .viewer-arrow.prev{left:max(10px,env(safe-area-inset-left))}
 .viewer-arrow.next{right:max(10px,env(safe-area-inset-right))}
+
+.map-marker .pin-count,.paper-pin .pin-count{position:absolute;top:5px;left:30px;margin:0;padding:2px;display:grid;place-items:center;min-width:22px;height:22px;border:1px solid #fffdf2;border-radius:20px;background:var(--forest);color:var(--cream);font:11px/1 var(--sans);box-shadow:0 2px 5px #173d3220;pointer-events:none}

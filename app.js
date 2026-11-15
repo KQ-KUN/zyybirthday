@@ -1,8 +1,9 @@
-import {pushpinSvg} from './pushpin.js?v=20261115-8';
-import {regionLabels} from './region-labels.js?v=20261115-8';
-import {createImageSwap,crossfade,cameraEase,regionMovement} from './transitions.js?v=20261115-8';
-import {createPaperMap,localStyle} from './paper-map.js?v=20261115-8';
-import {loadScript} from './network.js?v=20261115-8';
+import {groupPins} from './pin-groups.js?v=20261115-9';
+import {pushpinSvg} from './pushpin.js?v=20261115-9';
+import {regionLabels} from './region-labels.js?v=20261115-9';
+import {createImageSwap,crossfade,cameraEase,regionMovement} from './transitions.js?v=20261115-9';
+import {createPaperMap,localStyle} from './paper-map.js?v=20261115-9';
+import {loadScript} from './network.js?v=20261115-9';
 
 /* 地图位置只用于整理回忆，不用于定位或导航。 */
 'use strict';
@@ -29,6 +30,7 @@ export function startAlbum() {
   let markerFrame = 0;
   let photoPerspective = false;
   let movementEnabled=true;
+  let mapNavigated=false;
   const markers = new Map();
 
   function setStatus(message) { $('live-status').textContent = message; }
@@ -45,6 +47,7 @@ export function startAlbum() {
       if (!Array.isArray(place.photos)) throw new Error('照片列表无效');
       for (const photo of place.photos) {
         if (!record(photo) || typeof photo.src !== 'string' || !/^sealed\/[a-f0-9-]{36}\.bin$/.test(photo.src) || photo.src.includes('..') || typeof photo.alt !== 'string') throw new Error('照片路径或说明无效');
+        if(photo.thumbnail && (!record(photo.thumbnail)||typeof photo.thumbnail.src!=='string'||!/^sealed\/[a-f0-9-]{36}\.bin$/.test(photo.thumbnail.src)))throw new Error('缩略图路径无效');
       }
     }
     return value;
@@ -66,7 +69,7 @@ export function startAlbum() {
   function imageElement(photo,className){
     const img=document.createElement('img');img.alt=photo.alt;img.decoding='async';
     if(className)img.className=className;
-    lazyImages.set(img,{photo,visible:false,token:0});imageObserver.observe(img);
+    lazyImages.set(img,{photo:photo.thumbnail||photo,visible:false,token:0});imageObserver.observe(img);
     return img;
   }
   function clearGrid(){
@@ -122,7 +125,7 @@ export function startAlbum() {
       const active = selectedId === id;
       element.setAttribute('aria-pressed',String(active));
       const place = places.find((p) => p.id === id);
-      element.setAttribute('aria-label',`打开${place.name}的照片`);
+      if(place)element.setAttribute('aria-label',`打开${place.name}的照片`);
     });
   }
 
@@ -187,6 +190,12 @@ export function startAlbum() {
     element.addEventListener('dragstart',event=>event.preventDefault());
   }
 
+  function fitMapBounds(bounds,{padding,maxZoom,...options}){
+    // 当前视口已带相册留白，cameraForBounds 的 padding 是额外留白，不能再加一次。
+    let camera=map.cameraForBounds(bounds,{padding:0,maxZoom,bearing:options.bearing||0});
+    if(!camera){map.jumpTo({padding});camera=map.cameraForBounds(bounds,{padding:0,maxZoom,bearing:options.bearing||0});}
+    if(camera)map.easeTo({...camera,...options,padding,easing:cameraEase,essential:true});
+  }
   function fitAll(animate=true) {
     if (!places.length || !mapReady) return;
     if(map.isPaper){map.fitPlaces(places,{padding:cameraPadding(true),maxZoom:6.2,pitch:35,duration:animate&&movementEnabled?1400:0});return;}
@@ -194,28 +203,38 @@ export function startAlbum() {
     map.stop();
     photoPerspective = false;
     updatePerspectiveControls();
-    map.fitBounds(bounds,{padding:cameraPadding(true),maxZoom:places.length === 1 ? 8 : 6.2,pitch:$('map-pitch').getAttribute('aria-pressed') === 'true' ? 35 : 0,bearing:0,duration:animate&&movementEnabled?1400:0,essential:true});
+    fitMapBounds(bounds,{padding:cameraPadding(true),maxZoom:places.length === 1 ? 8 : 6.2,pitch:$('map-pitch').getAttribute('aria-pressed') === 'true' ? 35 : 0,bearing:0,duration:animate&&movementEnabled?1400:0,essential:true});
   }
 
-  function renderMarkers() {
-    if (!mapReady || map.isPaper) return;
-    const seen = new Set();
-    for(const place of places){
-      const id=place.id;
-      seen.add(id);
-      if (!markers.has(id)) {
-        const button = document.createElement('button'); button.className = 'map-marker';
-        button.innerHTML = pushpinSvg;
-        const label = document.createElement('span'); label.className = 'pin-label'; label.textContent = place.name; button.append(label);
-        button.setAttribute('aria-label', `打开${place.name}的照片`); button.setAttribute('aria-pressed', String(selectedId === id));
-        button.addEventListener('click', (event) => {
-          event.stopPropagation(); stopTour();
-          selectPlace(id);
-        });
-        markers.set(id,new maplibregl.Marker({element:button,anchor:'bottom',offset:[0,0]}).setLngLat(place.coordinates).addTo(map));
-      }
+  function expandPinGroup(group){
+    stopTour();
+    mapNavigated=true;
+    if(map.getZoom()>=11.9){openGallery(group.members);return;}
+    coverSwap.cancel();$('place-card').hidden=true;selectedId=null;writeHash(null);
+    document.querySelectorAll('.place-tile').forEach(button=>button.setAttribute('aria-pressed','false'));
+    const options={padding:cameraPadding(),maxZoom:Math.min(12,Math.max(7.5,map.getZoom()+2.5)),pitch:35,duration:movementEnabled?1800:0,essential:true};
+    if(map.isPaper)map.fitPlaces(group.members,options);
+    else{
+      const bounds=new maplibregl.LngLatBounds();group.members.forEach(place=>bounds.extend(place.coordinates));map.stop();fitMapBounds(bounds,options);
     }
-    markers.forEach((marker,id) => { if (!seen.has(id)) { marker.remove(); markers.delete(id); } });
+    setStatus(`正在展开 ${group.members.length} 个地点`);
+  }
+  function renderMarkers() {
+    if(!mapReady||map.isPaper)return;
+    const groups=groupPins(places,coordinates=>map.project(coordinates),{selectedId});
+    const seen=new Set();
+    for(const group of groups){
+      const id=group.id;seen.add(id);
+      if(markers.has(id))continue;
+      const button=document.createElement('button');button.className='map-marker';button.innerHTML=pushpinSvg;
+      const label=document.createElement('span');label.className='pin-label';label.textContent=group.label;button.append(label);
+      const clustered=group.members.length>1;
+      if(clustered){const badge=document.createElement('span');badge.className='pin-count';badge.textContent=String(group.members.length);badge.setAttribute('aria-hidden','true');button.append(badge);}
+      button.setAttribute('aria-label',clustered?`展开${group.label}`:`打开${group.label}的照片`);button.setAttribute('aria-pressed',String(selectedId===id));
+      button.addEventListener('click',event=>{event.stopPropagation();if(clustered)expandPinGroup(group);else{stopTour();selectPlace(id);}});
+      markers.set(id,new maplibregl.Marker({element:button,anchor:'bottom',offset:[0,0]}).setLngLat(group.coordinates).addTo(map));
+    }
+    markers.forEach((marker,id)=>{if(!seen.has(id)){marker.remove();markers.delete(id);}});
     updatePerspectiveControls();
   }
 
@@ -229,7 +248,7 @@ export function startAlbum() {
     clearTimeout(mapTimeout);
     if(map?.isPaper){$('map-notice').hidden=true;return;}
     if(map){map.remove();map=null;}mapReady=false;
-    map=createPaperMap($('map'),places,id=>{stopTour();selectPlace(id);},updatePerspectiveControls);
+    map=createPaperMap($('map'),places,id=>{stopTour();selectPlace(id);},updatePerspectiveControls,expandPinGroup);
     mapReady=true;$('map-notice').hidden=true;
     if(selectedId)selectPlace(selectedId);else fitAll(false);
   }
@@ -237,9 +256,9 @@ export function startAlbum() {
     if(mapLoading)return;mapLoading=true;
     const paper=map;
     try {
-      await loadScript('vendor/maplibre-gl.js?v=20261115-8',{timeoutMs:8000});
+      await loadScript('vendor/maplibre-gl.js?v=20261115-9',{timeoutMs:8000});
       if(!window.maplibregl)throw new Error('Map engine unavailable');
-      const engine=new maplibregl.Map({container:'map',style:localStyle,minZoom:2,maxZoom:8.5,attributionControl:false,renderWorldCopies:false,maxPitch:68,pixelRatio:Math.min(window.devicePixelRatio||1,1.5),canvasContextAttributes:{antialias:false},...paper.getCamera()});
+      const engine=new maplibregl.Map({container:'map',style:localStyle,minZoom:2,maxZoom:12,attributionControl:false,renderWorldCopies:false,maxPitch:68,pixelRatio:Math.min(window.devicePixelRatio||1,1.5),canvasContextAttributes:{antialias:false},...paper.getCamera()});
       engine.getCanvas().setAttribute('aria-label','回忆地图，可用方向键平移，使用加减键缩放');
       let ready=false;
       mapTimeout=setTimeout(()=>{if(!ready)engine.remove();},10000);
@@ -258,8 +277,13 @@ export function startAlbum() {
           return {element,coordinates:region.coordinates};
         });
         const updateLabels=()=>{
-          const points=places.map(place=>engine.project(place.coordinates));
-          for(const label of labels){const point=engine.project(label.coordinates);const overlap=points.some(pin=>Math.abs(pin.x-point.x)<60&&Math.abs(pin.y-point.y)<65);label.element.style.opacity=!overlap&&engine.getZoom()>=4&&engine.getZoom()<8?'1':'0';}
+          const points=places.map(place=>engine.project(place.coordinates)),occupied=[];
+          for(const label of labels){
+            const point=engine.project(label.coordinates);
+            const overlap=points.some(pin=>Math.abs(pin.x-point.x)<60&&Math.abs(pin.y-point.y)<65)||occupied.some(previous=>Math.abs(previous.x-point.x)<65&&Math.abs(previous.y-point.y)<25);
+            const visible=!overlap&&engine.getZoom()>=4&&engine.getZoom()<8;
+            label.element.style.opacity=visible?'1':'0';if(visible)occupied.push(point);
+          }
         };
         engine.on('move',updateLabels);updateLabels();
         engine.addSource('memories',{type:'geojson',data:{type:'FeatureCollection',features:places.map(place=>({type:'Feature',geometry:{type:'Point',coordinates:place.coordinates},properties:{id:place.id}}))}});
@@ -275,7 +299,7 @@ export function startAlbum() {
           updatePerspectiveControls();scheduleMarkers();
         });
         engine.on('idle',scheduleMarkers);engine.once('idle',()=>paper.remove());
-        if(!selectedId)fitAll(false);
+        if(!selectedId&&!mapNavigated)fitAll(false);
         engine.on('webglcontextlost',mapUnavailable);
         scheduleMarkers();
         };
@@ -287,8 +311,8 @@ export function startAlbum() {
 
   function flattenPhotos(list) { return list.flatMap((place) => place.photos.map((photo,index) => ({...photo,place,index}))); }
   function openGallery(place) {
-    const list = place ? [place] : places;
-    $('photos-title').textContent = place ? place.name : '全部照片';
+    const list=Array.isArray(place)?place:place?[place]:places;
+    $('photos-title').textContent=Array.isArray(place)?'此处照片':place?place.name:'全部照片';
     const entries = flattenPhotos(list);
     $('photos-subtitle').textContent = `${entries.length} 张${album.demo ? '示例' : ''}照片`;
     clearGrid();const grid = $('photo-grid');
@@ -389,6 +413,7 @@ export function startAlbum() {
   function initialize() {
     try {
       album=validateAlbum(window.memoryAlbum.album);places=album.places;
+      $('credits-open').hidden=window.memoryAlbum.credits.length===0;
       document.title=typeof album.title==='string'?album.title:'给妈妈的地图相册';
       $('demo-badge').hidden=!album.demo;document.querySelector('.letter-demo').hidden=!album.demo;
       if(record(album.letter)) {if(typeof album.letter.message==='string')$('letter-message').textContent=album.letter.message;if(typeof album.letter.signature==='string')$('letter-signature').textContent=album.letter.signature;}

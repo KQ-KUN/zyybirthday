@@ -1,7 +1,7 @@
-import {createPhotoCache} from './photo-cache.js?v=20261115-8';
-import {openAlbum,openPhoto,normalizeName,normalizeBirthday} from './crypto.js?v=20261115-8';
-import {downloadBytes} from './network.js?v=20261115-8';
-import {startAlbum} from './app.js?v=20261115-8';
+import {createPhotoCache} from './photo-cache.js?v=20261115-9';
+import {openAlbum,openPhoto,normalizeName,normalizeBirthday} from './crypto.js?v=20261115-9';
+import {downloadBytes} from './network.js?v=20261115-9';
+import {startAlbum} from './app.js?v=20261115-9';
 
 const form=document.getElementById('unlock-form');
 const error=document.getElementById('unlock-error');

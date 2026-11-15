@@ -1,7 +1,8 @@
-import {pushpinSvg} from './pushpin.js?v=20261115-8';
-import {regionLabels} from './region-labels.js?v=20261115-8';
-import {createCameraMotion,mixCamera,mixFlight,cameraEase} from './transitions.js?v=20261115-8';
-import {geography,land} from './geography.js?v=20261115-8';
+import {groupPins} from './pin-groups.js?v=20261115-9';
+import {pushpinSvg} from './pushpin.js?v=20261115-9';
+import {regionLabels} from './region-labels.js?v=20261115-9';
+import {createCameraMotion,mixCamera,mixFlight,cameraEase} from './transitions.js?v=20261115-9';
+import {geography,land} from './geography.js?v=20261115-9';
 
 export function project([longitude,latitude]) {
   const radians=Math.max(-85,Math.min(85,latitude))*Math.PI/180;
@@ -13,7 +14,7 @@ function paths(geometry) {
 }
 
 // 使用同一份真实地理数据。地图引擎尚未到达或 WebGL 不可用时仍可操作。
-export function createPaperMap(container,places,onSelect,onMove) {
+export function createPaperMap(container,places,onSelect,onMove,onGroupSelect) {
   const surface=document.createElement('div');surface.className='paper-map';surface.tabIndex=0;
   surface.setAttribute('role','region');surface.setAttribute('aria-label','回忆地图，可拖动和缩放');
   const ground=document.createElement('div');ground.className='paper-ground';
@@ -26,16 +27,23 @@ export function createPaperMap(container,places,onSelect,onMove) {
   ground.append(svg);surface.append(ground);container.append(surface);
   let center=project([110,35]),zoom=4,pitch=35,bearing=0,padding={top:0,bottom:0,left:0,right:0};
   let motion;
-  const pins=[];
-  for(const place of places){
-    const point=project(place.coordinates),button=document.createElement('button');button.className='paper-pin';button.setAttribute('aria-label',`打开${place.name}的照片`);
-    button.style.left=point[0]+'px';button.style.top=point[1]+'px';
-    button.innerHTML=pushpinSvg;const label=document.createElement('span');label.className='pin-label';label.textContent=place.name;button.append(label);
-
-    button.addEventListener('click',event=>{event.stopPropagation();onSelect(place.id);});
-    ground.append(button);pins.push({button,point,placeId:place.id});button.dataset.label=`打开${place.name}的照片`;
+  let pins=[],pinSignature='',selectedPin=null;
+  function refreshPins(){
+    const scale=2**zoom/8,cos=Math.cos(bearing*Math.PI/180),sin=Math.sin(bearing*Math.PI/180);
+    const groups=groupPins(places,coordinates=>{const p=project(coordinates);return {x:(p[0]*cos+p[1]*sin)*scale,y:(-p[0]*sin+p[1]*cos)*scale*Math.cos(pitch*Math.PI/180)};},{selectedId:selectedPin});
+    const signature=groups.map(group=>group.id).join('|');if(signature===pinSignature)return;pinSignature=signature;
+    pins.forEach(pin=>pin.button.remove());pins=[];
+    for(const group of groups){
+      const point=project(group.coordinates),button=document.createElement('button');button.className='paper-pin';button.innerHTML=pushpinSvg;
+      const clustered=group.members.length>1,label=document.createElement('span');label.className='pin-label';label.textContent=group.label;button.append(label);
+      if(clustered){const badge=document.createElement('span');badge.className='pin-count';badge.textContent=String(group.members.length);badge.setAttribute('aria-hidden','true');button.append(badge);}
+      button.dataset.label=clustered?`展开${group.label}`:`打开${group.label}的照片`;button.setAttribute('aria-label',button.dataset.label);
+      button.addEventListener('click',event=>{event.stopPropagation();if(clustered)onGroupSelect?.(group);else onSelect(group.id);});
+      ground.append(button);pins.push({button,point,placeId:group.id});
+    }
   }
   function draw(duration=0){
+    if(!motion?.isMoving()&&!drag)refreshPins();
     const scale=2**zoom/8;
     const width=surface.clientWidth*2,height=surface.clientHeight*2;
     ground.style.width=width+'px';ground.style.height=height+'px';svg.setAttribute('viewBox',`0 0 ${width} ${height}`);
@@ -60,11 +68,11 @@ export function createPaperMap(container,places,onSelect,onMove) {
   const api={
     isPaper:true,getZoom:()=>zoom,getPitch:()=>pitch,getBearing:()=>bearing,
     getCamera:()=>({center:unproject(center),zoom,pitch,bearing,padding:{...padding}}),
-    updateSelection(id,low){for(const {button,placeId} of pins){const active=placeId===id;button.classList.toggle('is-selected',active);button.setAttribute('aria-pressed',String(active));button.setAttribute('aria-label',button.dataset.label);}},
+    updateSelection(id,low){selectedPin=id;for(const {button,placeId} of pins){const active=placeId===id;button.classList.toggle('is-selected',active);button.setAttribute('aria-pressed',String(active));button.setAttribute('aria-label',button.dataset.label);}},
     stop:()=>motion.stop(),isMoving:()=>motion.isMoving()||Boolean(drag),getSource:()=>null,resize:()=>draw(),
     easeTo(options){
       const target=current();if(options.center)target.center=project(options.center);
-      if(options.zoom!==undefined)target.zoom=Math.max(2.5,Math.min(8.2,options.zoom));
+      if(options.zoom!==undefined)target.zoom=Math.max(2.5,Math.min(12,options.zoom));
       if(options.pitch!==undefined)target.pitch=options.pitch;if(options.bearing!==undefined)target.bearing=options.bearing;if(options.padding)target.padding=options.padding;
       motion.to(target,options.duration||0,{easing:options.easing||cameraEase,interpolate:options.flight?mixFlight:mixCamera});
     },
@@ -82,7 +90,7 @@ export function createPaperMap(container,places,onSelect,onMove) {
   let drag;
   surface.addEventListener('pointerdown',event=>{if(event.target.closest('button'))return;motion.stop();drag={x:event.clientX,y:event.clientY,center:[...center]};surface.setPointerCapture(event.pointerId);});
   surface.addEventListener('pointermove',event=>{if(!drag)return;const scale=2**zoom/8;const target=current();target.center=[drag.center[0]-(event.clientX-drag.x)/scale,drag.center[1]-(event.clientY-drag.y)/scale/Math.max(.4,Math.cos(pitch*Math.PI/180))];motion.to(target,0);});
-  surface.addEventListener('pointerup',()=>{drag=null;});surface.addEventListener('pointercancel',()=>{drag=null;});
+  surface.addEventListener('pointerup',()=>{drag=null;draw();});surface.addEventListener('pointercancel',()=>{drag=null;draw();});
   surface.addEventListener('wheel',event=>{event.preventDefault();api.easeTo({zoom:zoom-Math.sign(event.deltaY)*.3,duration:180});},{passive:false});
   surface.addEventListener('keydown',event=>{
     if(event.key==='+'||event.key==='='){event.preventDefault();api.zoomIn();}if(event.key==='-'){event.preventDefault();api.zoomOut();}

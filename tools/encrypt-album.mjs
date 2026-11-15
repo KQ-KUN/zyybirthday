@@ -17,7 +17,7 @@ const input=await new Promise((resolve,reject)=>{
 const album=JSON.parse(await readFile(resolve(source,'album.json'),'utf8'));
 const credits=JSON.parse(await readFile(resolve(source,'assets/credits.json'),'utf8'));
 const paths=new Map();
-for(const place of album.places)for(const photo of place.photos){
+for(const place of album.places)for(const original of place.photos)for(const photo of [original,original.thumbnail].filter(Boolean)){
   if(typeof photo.src!=='string' || !/^assets\/[a-zA-Z0-9_./-]+\.jpe?g$/i.test(photo.src) || photo.src.includes('..'))throw new Error('Invalid photo path');
   const local=relative(source,resolve(source,photo.src));
   if(local.startsWith('..'+sep)||local==='..'||isAbsolute(local))throw new Error('Photo path outside source');
@@ -51,4 +51,4 @@ html=html.replace(/\s*<script id="sealed-album"[\s\S]*?<\/script>/,'');
 html=html.replace('</body>','<script id="sealed-album" type="application/json">'+serialized+'</script>\n</body>');
 await writeFile(htmlPath,html);
 input.name='';input.birthday='';
-console.log(JSON.stringify({encrypted:true,photos:paths.size,bytes:Buffer.byteLength(serialized),roundtrip:true,incorrectCredentialRejected:true}));
+console.log(JSON.stringify({encrypted:true,photos:album.places.reduce((sum,place)=>sum+place.photos.length,0),assets:paths.size,bytes:Buffer.byteLength(serialized),roundtrip:true,incorrectCredentialRejected:true}));
