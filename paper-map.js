@@ -1,4 +1,4 @@
-import {geography,land} from './geography.js?v=20261115-3';
+import {geography,land} from './geography.js?v=20261115-4';
 
 export function project([longitude,latitude]) {
   const radians=Math.max(-85,Math.min(85,latitude))*Math.PI/180;
@@ -14,9 +14,10 @@ export function createPaperMap(container,places,onSelect,onMove) {
   const surface=document.createElement('div');surface.className='paper-map';surface.tabIndex=0;
   surface.setAttribute('role','region');surface.setAttribute('aria-label','回忆地图，可拖动和缩放');
   const ground=document.createElement('div');ground.className='paper-ground';
-  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 4096 4096');
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  const shapes=document.createElementNS(svg.namespaceURI,'g');svg.append(shapes);
   for(const [collection,kind] of [[land,'land'],[geography,'province']])for(const feature of collection.features){
-    const path=document.createElementNS(svg.namespaceURI,'path');path.setAttribute('d',paths(feature.geometry));path.setAttribute('class',kind);svg.append(path);
+    const path=document.createElementNS(svg.namespaceURI,'path');path.setAttribute('d',paths(feature.geometry));path.setAttribute('class',kind);shapes.append(path);
   }
   ground.append(svg);surface.append(ground);container.append(surface);
   let center=project([110,35]),zoom=4,pitch=35,bearing=0,padding={top:0,bottom:0,left:0,right:0};
@@ -27,15 +28,20 @@ export function createPaperMap(container,places,onSelect,onMove) {
     const label=document.createElement('span');label.textContent=place.name;button.append(label);
     if(place.photos[0])window.memoryAlbum.loadPhoto(place.photos[0]).then(url=>{const img=document.createElement('img');img.src=url;img.alt='';button.prepend(img);}).catch(()=>{});
     button.addEventListener('click',event=>{event.stopPropagation();onSelect(place.id);});
-    ground.append(button);pins.push(button);
+    ground.append(button);pins.push({button,point});
   }
   function draw(duration=0){
     const scale=2**zoom/16;
-    ground.style.left=(surface.clientWidth/2+(padding.left-padding.right)/2)+'px';
-    ground.style.top=(surface.clientHeight/2+(padding.top-padding.bottom)/2)+'px';
+    const width=surface.clientWidth*2,height=surface.clientHeight*2;
+    ground.style.width=width+'px';ground.style.height=height+'px';svg.setAttribute('viewBox',`0 0 ${width} ${height}`);
+    ground.style.left=(surface.clientWidth/2+(padding.left-padding.right)/2-width/2)+'px';
+    ground.style.top=(surface.clientHeight/2+(padding.top-padding.bottom)/2-height/2)+'px';
     ground.style.transitionDuration=duration+'ms';
-    ground.style.transform=`rotateX(${pitch}deg) rotateZ(${-bearing}deg) scale(${scale}) translate(${-center[0]}px,${-center[1]}px)`;
-    for(const pin of pins){pin.style.transitionDuration=duration+'ms';pin.style.transform=`translate(-50%,-100%) scale(${1/scale}) rotateZ(${bearing}deg) rotateX(${-pitch}deg)`;}
+    ground.style.transform=`rotateX(${pitch}deg) rotateZ(${-bearing}deg)`;
+    // 变换 SVG 向量坐标，避免放大整张位图造成模糊和过大的手机纹理。
+    shapes.style.transitionDuration=duration+'ms';
+    shapes.style.transform=`translate(${width/2}px,${height/2}px) scale(${scale}) translate(${-center[0]}px,${-center[1]}px)`;
+    for(const {button,point} of pins){button.style.left=(width/2+(point[0]-center[0])*scale)+'px';button.style.top=(height/2+(point[1]-center[1])*scale)+'px';button.style.transitionDuration=duration+'ms';button.style.transform=`translate(-50%,-100%) rotateZ(${bearing}deg) rotateX(${-pitch}deg)`;}
     onMove();
   }
   const api={

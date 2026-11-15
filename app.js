@@ -1,5 +1,5 @@
-import {createPaperMap,localStyle} from './paper-map.js?v=20261115-3';
-import {loadScript} from './network.js?v=20261115-3';
+import {createPaperMap,localStyle} from './paper-map.js?v=20261115-4';
+import {loadScript} from './network.js?v=20261115-4';
 
 /* 地图位置只用于整理回忆，不用于定位或导航。 */
 'use strict';
@@ -206,7 +206,7 @@ export function startAlbum() {
     $('map-notice').textContent='正在展开地图';
     const paper=map;let engineReady=false;
     try {
-      await loadScript('vendor/maplibre-gl.js?v=20261115-3',{timeoutMs:8000});
+      await loadScript('vendor/maplibre-gl.js?v=20261115-4',{timeoutMs:8000});
       if(!window.maplibregl)throw new Error('Map engine unavailable');
       map = new maplibregl.Map({container:'map',style:localStyle,center:[117.5,34],zoom:4.5,minZoom:2,maxZoom:8.5,pitch:35,bearing:0,attributionControl:false,renderWorldCopies:false,maxPitch:68,pixelRatio:Math.min(window.devicePixelRatio || 1,1.5),canvasContextAttributes:{antialias:false},maxTileCacheSize:192});
       map.getCanvas().setAttribute('aria-label','回忆地图，可用方向键平移，使用加减键缩放');
@@ -342,4 +342,9 @@ export function startAlbum() {
     } catch(error) {$('map-notice').textContent=error.message || '相册暂时无法加载，请稍后重试。';$('map-notice').classList.add('is-error');$('tour-button').disabled=true;$('gallery-open').disabled=true;}
   }
   initialize();
+  window.addEventListener('resize',()=>{
+    if(!mapReady)return;
+    const place=places.find(value=>value.id===selectedId);
+    if(place)map.easeTo({center:place.coordinates,padding:cameraPadding(),duration:0});else fitAll();
+  });
 }

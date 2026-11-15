@@ -1,6 +1,6 @@
-import {openAlbum,openPhoto,normalizeName,normalizeBirthday} from './crypto.js?v=20261115-3';
-import {downloadBytes} from './network.js?v=20261115-3';
-import {startAlbum} from './app.js?v=20261115-3';
+import {openAlbum,openPhoto,normalizeName,normalizeBirthday} from './crypto.js?v=20261115-4';
+import {downloadBytes} from './network.js?v=20261115-4';
+import {startAlbum} from './app.js?v=20261115-4';
 
 const form=document.getElementById('unlock-form');
 const error=document.getElementById('unlock-error');
