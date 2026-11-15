@@ -200,3 +200,37 @@ button:focus-visible,a:focus-visible{outline:3px solid #d49d65;outline-offset:4p
 .map-marker .pin-head svg{stroke:var(--cream)}
 button:focus-visible,a:focus-visible{outline-color:var(--forest)}.album-sidebar button:focus-visible,.viewer button:focus-visible{outline-color:#f0d6a6}.map-credit a{display:inline-block;min-height:24px;line-height:24px;padding:0 4px}.map-credit{padding:0 3px}.header-actions{gap:10px}@media(max-width:360px){.masthead .eyebrow,.header-actions .demo-badge{display:none}.masthead h1{font-size:27px}.header-actions{gap:7px}}
 @media(min-width:560px) and (max-height:500px){.album-sidebar{padding:12px;gap:10px}.album-content{gap:8px}.place-photo-view{height:68px}.place-photo-view>svg{left:10px;right:auto}.place-card-open{min-height:60px;padding-top:8px}.dock-heading{display:none}.place-tile img{height:24px}.place-tile{gap:4px;padding:4px}.album-dock{padding-top:10px}.dock-actions{margin-top:8px}}
+
+/* 针尖对应地点坐标；标签悬在针下，不改变地图锚点。 */
+.map-marker,.paper-pin{width:48px;min-width:48px;height:64px;min-height:64px;padding:0;border:0;background:none;overflow:visible;filter:none}
+.map-marker>.pushpin,.paper-pin>.pushpin{position:static;display:block;width:48px;height:64px;transform:none;overflow:visible;fill:none;stroke:none}
+.pushpin .pushpin-shadow{fill:#183d3230;stroke:none}
+.pushpin .pushpin-needle{fill:#dce4df;stroke:#647c74;stroke-width:1}
+.pushpin .pushpin-body{fill:#8f4438;stroke:#62382e;stroke-width:1}
+.pushpin .pushpin-head{fill:#bf6c50;stroke:#783e30;stroke-width:1.2}
+.pushpin .pushpin-shine{fill:none;stroke:#f5d4ac;stroke-width:2;stroke-linecap:round}
+.map-marker[aria-pressed="true"] .pushpin-head,.paper-pin.is-selected .pushpin-head{fill:#eab477;stroke:#72542d;stroke-width:2}
+.map-marker .pin-label,.paper-pin .pin-label{position:absolute;top:60px;left:50%;transform:translateX(-50%);margin:0;white-space:nowrap;font:12px/1.5 var(--sans);padding:3px 8px;border:1px solid #fdfbf0;border-radius:5px;background:#fffdf2ed;color:var(--forest);box-shadow:0 2px 8px #173d3210}
+.card-photo-nav{display:flex;align-items:center;justify-content:center;gap:8px;height:44px;margin-top:3px;font-size:12px;font-variant-numeric:tabular-nums}
+.card-photo-nav button{width:44px;height:44px;border:0;border-radius:50%;background:transparent;color:var(--cream);font-size:28px}
+.card-photo-nav span{min-width:60px;text-align:center}
+.place-photo-view,.viewer-stage{touch-action:pan-y pinch-zoom;user-select:none;-webkit-user-select:none}
+.place-photo-view img,.viewer-stage img{-webkit-user-drag:none;pointer-events:none}
+.place-photo-view>svg{pointer-events:none}
+.place-photo-frame{position:relative}
+.place-photo-frame .place-photo-view>svg{right:auto;left:8px}
+.place-photo-view img{object-fit:contain}
+.card-expand{position:absolute;right:8px;bottom:8px;width:44px;height:44px;display:grid;place-items:center;border:1px solid #ffffff55;border-radius:50%;background:#173d32de;color:var(--cream);z-index:4}
+.card-expand svg{width:20px;height:20px}
+.photo-item img,.place-tile img{background:#72857333}
+@media(max-width:700px){
+  .album-content:has(.place-card:not([hidden])) .place-strip,.album-content:has(.place-card:not([hidden])) .dock-heading{display:none}
+  .album-content:has(.place-card:not([hidden])) .dock-actions{margin-top:0}
+  .place-photo-view{height:clamp(140px,23vh,205px)}
+  .place-card-open{min-height:74px;padding:7px 0 12px}
+  .card-close{top:8px;right:8px;border-radius:50%;background:#173d32de;color:var(--cream);z-index:5}
+  .place-photo-view>svg{bottom:8px;right:8px}
+  .place-index{font-size:24px}
+}
+@media(max-width:700px) and (max-height:740px){.place-photo-view{height:135px}.card-photo-nav{height:44px}.place-card-open{min-height:65px}.album-content{max-height:calc(100dvh - 200px)}}
+@media(min-width:560px) and (max-height:500px){.place-photo-view{height:68px}.card-photo-nav{height:30px}.card-photo-nav button{height:44px}.place-card-open{min-height:50px}}

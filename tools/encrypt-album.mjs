@@ -16,18 +16,11 @@ const input=await new Promise((resolve,reject)=>{
 });
 const album=JSON.parse(await readFile(resolve(source,'album.json'),'utf8'));
 const credits=JSON.parse(await readFile(resolve(source,'assets/credits.json'),'utf8'));
-const images={};
-for(const place of album.places)for(const photo of place.photos){
-  if(images[photo.src])continue;
-  if(typeof photo.src!=='string' || !/^assets\/[a-zA-Z0-9_./-]+\.jpe?g$/i.test(photo.src) || photo.src.includes('..'))throw new Error('Invalid photo path');
-  const path=resolve(source,photo.src);const local=relative(source,path);
-  if(local.startsWith('..'+sep) || local==='..' || isAbsolute(local))throw new Error('Photo path outside source');
-  const bytes=await readFile(path);
-  if(bytes[0]!==0xff || bytes[1]!==0xd8)throw new Error('Expected a JPEG photo');
-  images[photo.src]=bytes.toString('base64');
-}
 const paths=new Map();
 for(const place of album.places)for(const photo of place.photos){
+  if(typeof photo.src!=='string' || !/^assets\/[a-zA-Z0-9_./-]+\.jpe?g$/i.test(photo.src) || photo.src.includes('..'))throw new Error('Invalid photo path');
+  const local=relative(source,resolve(source,photo.src));
+  if(local.startsWith('..'+sep)||local==='..'||isAbsolute(local))throw new Error('Photo path outside source');
   if(!paths.has(photo.src))paths.set(photo.src,crypto.randomUUID());
   photo.id=paths.get(photo.src);photo.src='sealed/'+photo.id+'.bin';
 }
@@ -38,7 +31,9 @@ const verified=await decryptAlbum(envelope,input.name,input.birthday);
 if(verified.album.places.length!==album.places.length)throw new Error('Roundtrip verification failed');
 await mkdir(resolve(destination,'../sealed'),{recursive:true});
 for(const [path,id] of paths){
-  const bytes=Uint8Array.from(Buffer.from(images[path],'base64'));
+  // 逐张读取和验证，200 多张原图也不同时驻留内存。
+  const bytes=new Uint8Array(await readFile(resolve(source,path)));
+  if(bytes[0]!==0xff||bytes[1]!==0xd8)throw new Error('Expected a JPEG photo');
   const sealed=await sealPhoto(bytes,key,id);
   const opened=await openPhoto(sealed,key,id);
   if(!Buffer.from(opened).equals(Buffer.from(bytes)))throw new Error('Photo verification failed');
@@ -56,4 +51,4 @@ html=html.replace(/\s*<script id="sealed-album"[\s\S]*?<\/script>/,'');
 html=html.replace('</body>','<script id="sealed-album" type="application/json">'+serialized+'</script>\n</body>');
 await writeFile(htmlPath,html);
 input.name='';input.birthday='';
-console.log(JSON.stringify({encrypted:true,photos:Object.keys(images).length,bytes:Buffer.byteLength(serialized),roundtrip:true,incorrectCredentialRejected:true}));
+console.log(JSON.stringify({encrypted:true,photos:paths.size,bytes:Buffer.byteLength(serialized),roundtrip:true,incorrectCredentialRejected:true}));

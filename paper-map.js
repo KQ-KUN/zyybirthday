@@ -1,6 +1,7 @@
-import {regionLabels} from './region-labels.js?v=20261115-6';
-import {createCameraMotion,mixCamera,mixFlight,cameraEase} from './transitions.js?v=20261115-6';
-import {geography,land} from './geography.js?v=20261115-6';
+import {pushpinSvg} from './pushpin.js?v=20261115-7';
+import {regionLabels} from './region-labels.js?v=20261115-7';
+import {createCameraMotion,mixCamera,mixFlight,cameraEase} from './transitions.js?v=20261115-7';
+import {geography,land} from './geography.js?v=20261115-7';
 
 export function project([longitude,latitude]) {
   const radians=Math.max(-85,Math.min(85,latitude))*Math.PI/180;
@@ -29,13 +30,13 @@ export function createPaperMap(container,places,onSelect,onMove) {
   for(const place of places){
     const point=project(place.coordinates),button=document.createElement('button');button.className='paper-pin';button.setAttribute('aria-label',`打开${place.name}的照片`);
     button.style.left=point[0]+'px';button.style.top=point[1]+'px';
-    const label=document.createElement('span');label.textContent=place.name;button.append(label);
-    if(place.photos[0])window.memoryAlbum.loadPhoto(place.photos[0]).then(url=>{const img=document.createElement('img');img.src=url;img.alt='';button.prepend(img);}).catch(()=>{});
+    button.innerHTML=pushpinSvg;const label=document.createElement('span');label.className='pin-label';label.textContent=place.name;button.append(label);
+
     button.addEventListener('click',event=>{event.stopPropagation();onSelect(place.id);});
     ground.append(button);pins.push({button,point,placeId:place.id});button.dataset.label=`打开${place.name}的照片`;
   }
   function draw(duration=0){
-    const scale=2**zoom/16;
+    const scale=2**zoom/8;
     const width=surface.clientWidth*2,height=surface.clientHeight*2;
     ground.style.width=width+'px';ground.style.height=height+'px';svg.setAttribute('viewBox',`0 0 ${width} ${height}`);
     ground.style.left=(surface.clientWidth/2+(padding.left-padding.right)/2-width/2)+'px';
@@ -59,7 +60,7 @@ export function createPaperMap(container,places,onSelect,onMove) {
   const api={
     isPaper:true,getZoom:()=>zoom,getPitch:()=>pitch,getBearing:()=>bearing,
     getCamera:()=>({center:unproject(center),zoom,pitch,bearing,padding:{...padding}}),
-    updateSelection(id,low){for(const {button,placeId} of pins){const active=placeId===id;button.classList.toggle('is-selected',active);button.setAttribute('aria-pressed',String(active));button.setAttribute('aria-label',active&&zoom>=7?`${low?'恢复':'切换'}当前地点视角`:button.dataset.label);}},
+    updateSelection(id,low){for(const {button,placeId} of pins){const active=placeId===id;button.classList.toggle('is-selected',active);button.setAttribute('aria-pressed',String(active));button.setAttribute('aria-label',button.dataset.label);}},
     stop:()=>motion.stop(),isMoving:()=>motion.isMoving()||Boolean(drag),getSource:()=>null,resize:()=>draw(),
     easeTo(options){
       const target=current();if(options.center)target.center=project(options.center);
@@ -72,7 +73,7 @@ export function createPaperMap(container,places,onSelect,onMove) {
       const points=list.map(place=>project(place.coordinates)),xs=points.map(p=>p[0]),ys=points.map(p=>p[1]);
       const target=current();target.padding=options.padding;target.center=[(Math.min(...xs)+Math.max(...xs))/2,(Math.min(...ys)+Math.max(...ys))/2];
       const width=Math.max(100,surface.clientWidth-target.padding.left-target.padding.right),height=Math.max(120,surface.clientHeight-target.padding.top-target.padding.bottom);
-      target.zoom=Math.min(options.maxZoom,Math.log2(16*Math.min(width/Math.max(30,Math.max(...xs)-Math.min(...xs)),height/Math.max(30,Math.max(...ys)-Math.min(...ys)))));
+      target.zoom=Math.min(options.maxZoom,Math.log2(8*Math.min(width/Math.max(30,Math.max(...xs)-Math.min(...xs)),height/Math.max(30,Math.max(...ys)-Math.min(...ys)))));
       target.pitch=options.pitch;target.bearing=0;motion.to(target,options.duration||0);
     },
     zoomIn(){api.easeTo({zoom:zoom+.7,duration:300});},zoomOut(){api.easeTo({zoom:zoom-.7,duration:300});},
@@ -80,13 +81,13 @@ export function createPaperMap(container,places,onSelect,onMove) {
   };
   let drag;
   surface.addEventListener('pointerdown',event=>{if(event.target.closest('button'))return;motion.stop();drag={x:event.clientX,y:event.clientY,center:[...center]};surface.setPointerCapture(event.pointerId);});
-  surface.addEventListener('pointermove',event=>{if(!drag)return;const scale=2**zoom/16;const target=current();target.center=[drag.center[0]-(event.clientX-drag.x)/scale,drag.center[1]-(event.clientY-drag.y)/scale/Math.max(.4,Math.cos(pitch*Math.PI/180))];motion.to(target,0);});
+  surface.addEventListener('pointermove',event=>{if(!drag)return;const scale=2**zoom/8;const target=current();target.center=[drag.center[0]-(event.clientX-drag.x)/scale,drag.center[1]-(event.clientY-drag.y)/scale/Math.max(.4,Math.cos(pitch*Math.PI/180))];motion.to(target,0);});
   surface.addEventListener('pointerup',()=>{drag=null;});surface.addEventListener('pointercancel',()=>{drag=null;});
   surface.addEventListener('wheel',event=>{event.preventDefault();api.easeTo({zoom:zoom-Math.sign(event.deltaY)*.3,duration:180});},{passive:false});
   surface.addEventListener('keydown',event=>{
     if(event.key==='+'||event.key==='='){event.preventDefault();api.zoomIn();}if(event.key==='-'){event.preventDefault();api.zoomOut();}
     const direction={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[event.key];
-    if(direction){event.preventDefault();const scale=2**zoom/16;api.easeTo({center:unproject([center[0]+direction[0]*60/scale,center[1]+direction[1]*60/scale]),duration:180});}
+    if(direction){event.preventDefault();const scale=2**zoom/8;api.easeTo({center:unproject([center[0]+direction[0]*60/scale,center[1]+direction[1]*60/scale]),duration:180});}
   });
   const resize=()=>draw();window.addEventListener('resize',resize);
   draw();return api;

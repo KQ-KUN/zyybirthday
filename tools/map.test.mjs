@@ -17,7 +17,8 @@ test('解锁所需清单直接内嵌页面，不再下载整包照片',async()=>
   const html=await readFile(new URL('../index.html',import.meta.url),'utf8');
   const match=html.match(/<script id="sealed-album" type="application\/json">([\s\S]*?)<\/script>/);
   assert(match);const envelope=JSON.parse(match[1]);
-  assert.equal(envelope.format,'memory-map-v1');assert(match[1].length<12000);
+  // 清单包含数百张照片的元数据也可增长，图片二进制仍逐张独立下载。
+  assert.equal(envelope.format,'memory-map-v1');assert(match[1].length<2*1024*1024);
   const unlock=await readFile(new URL('../unlock.js',import.meta.url),'utf8');
   assert(!unlock.includes("downloadJSON('album.enc.json"));assert(!unlock.includes('payload.images'));
 });

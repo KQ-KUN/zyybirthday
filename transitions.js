@@ -44,6 +44,7 @@ export function createImageSwap(image,{reduced=false,contain=false}={}) {
   return {
     cancel:()=>latest.cancel(),
     show(photo,load,onCommit=()=>{},onError=()=>{}){
+      const release=load.retain?.(photo)||(()=>{});
       return latest.run(async()=>{
         const url=await load(photo);
         const ready=new Image();ready.src=url;
@@ -53,7 +54,7 @@ export function createImageSwap(image,{reduced=false,contain=false}={}) {
       },url=>{
         if(image.getAttribute('src')!==url)crossfade(image,()=>{image.src=url;image.alt=photo.alt||'';},{reduced,contain});
         onCommit();
-      },onError);
+      },onError).finally(release);
     }
   };
 }

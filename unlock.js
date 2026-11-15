@@ -1,6 +1,7 @@
-import {openAlbum,openPhoto,normalizeName,normalizeBirthday} from './crypto.js?v=20261115-6';
-import {downloadBytes} from './network.js?v=20261115-6';
-import {startAlbum} from './app.js?v=20261115-6';
+import {createPhotoCache} from './photo-cache.js?v=20261115-7';
+import {openAlbum,openPhoto,normalizeName,normalizeBirthday} from './crypto.js?v=20261115-7';
+import {downloadBytes} from './network.js?v=20261115-7';
+import {startAlbum} from './app.js?v=20261115-7';
 
 const form=document.getElementById('unlock-form');
 const error=document.getElementById('unlock-error');
@@ -12,24 +13,28 @@ submit.disabled=false;submit.textContent=originalLabel;
 
 function hydrate(payload,key) {
   if(!payload || payload.version!==2 || !payload.album || !Array.isArray(payload.album.places) || !Array.isArray(payload.credits))throw new Error('相册格式无效');
-  const photos=new Map(),urls=[];
-  async function loadPhoto(photo){
+  const cache=createPhotoCache({
+    dispose:url=>URL.revokeObjectURL(url),
+    isVisible:url=>[...document.images].some(img=>img.src===url),
+    load:async(photo)=>{
+
     if(!/^sealed\/[a-f0-9-]{36}\.bin$/.test(photo.src) || !/^[a-f0-9-]{36}$/.test(photo.id))throw new Error('照片路径无效');
-    if(photos.has(photo.id))return photos.get(photo.id);
-    const loading=(async()=>{
+
       let bytes;
       for(let attempt=0;attempt<2;attempt++){
         try{bytes=await downloadBytes(photo.src,{timeoutMs:25000});break;}
         catch(e){if(attempt===1)throw e;await new Promise(resolve=>setTimeout(resolve,400));}
       }
       const plaintext=await openPhoto(bytes,key,photo.id);
-      const url=URL.createObjectURL(new Blob([plaintext],{type:'image/jpeg'}));plaintext.fill(0);urls.push(url);return url;
-    })();
-    photos.set(photo.id,loading);loading.catch(()=>photos.delete(photo.id));return loading;
-  }
-  window.memoryAlbum={album:payload.album,credits:payload.credits,loadPhoto};
-  window.addEventListener('pagehide',()=>{urls.forEach(url=>URL.revokeObjectURL(url));delete window.memoryAlbum;},{once:true});
-  return urls;
+      const size=plaintext.byteLength;
+      const url=URL.createObjectURL(new Blob([plaintext],{type:'image/jpeg'}));plaintext.fill(0);return {url,bytes:size};
+    }
+  });
+  const loadPhoto=(photo,options)=>cache.get(photo,options);
+  loadPhoto.retain=photo=>cache.retain(photo.id);
+  window.memoryAlbum={album:payload.album,credits:payload.credits,loadPhoto,trimPhotos:cache.trim};
+  window.addEventListener('pagehide',()=>{cache.clear();delete window.memoryAlbum;},{once:true});
+  return ()=>cache.clear();
 }
 
 form.addEventListener('submit',async(event)=>{
@@ -47,7 +52,7 @@ form.addEventListener('submit',async(event)=>{
     let payload,key;
     try{({payload,key}=await openAlbum(envelope,name,birthday));}catch{error.textContent='信息不匹配，请检查姓名和生日月日。';return;}
     nameInput.value='';birthdayInput.value='';name='';birthday='';
-    const urls=hydrate(payload,key);
+    const disposePhotos=hydrate(payload,key);
     document.getElementById('unlock-screen').hidden=true;
     document.getElementById('app').hidden=false;
     document.body.classList.add('album-unlocked');
@@ -56,7 +61,7 @@ form.addEventListener('submit',async(event)=>{
       document.getElementById('unlock-screen').hidden=false;
       document.getElementById('app').hidden=true;
       document.body.classList.remove('album-unlocked');
-      urls.forEach(url=>URL.revokeObjectURL(url));delete window.memoryAlbum;throw e;
+      disposePhotos();delete window.memoryAlbum;throw e;
     }
     document.getElementById('map-home').focus();
   }catch(e){error.textContent=e.message?.includes('超时')?e.message:'相册加载失败，请检查网络后再次点击打开。';}
