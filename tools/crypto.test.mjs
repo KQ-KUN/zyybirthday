@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {encryptAlbum,decryptAlbum,normalizeName,normalizeBirthday,deriveKey,sealPhoto,openPhoto} from '../crypto.js';
+import {encryptAlbum,decryptAlbum,normalizeName,normalizeBirthday,deriveKey,sealPhoto,openPhoto,resealAlbum} from '../crypto.js';
 
 test('姓名和月日规范化，并拒绝无效日期',()=>{
   assert.equal(normalizeName(' 测 试 '),'测试');
@@ -38,4 +38,16 @@ test('同样内容每次生成不同密文；篡改密文后校验失败',async(
   const bytes=Buffer.from(a.ciphertext,'base64');bytes[0]^=1;
   await assert.rejects(()=>decryptAlbum({...a,ciphertext:bytes.toString('base64')},'测试昵称','0518'));
   await assert.rejects(()=>decryptAlbum({...a,iterations:1},'测试昵称','0518'));
+});
+
+test('地点清单更新保留原照片密钥，采用新的 IV，旧照片仍可解密',async()=>{
+  const old=await encryptAlbum({version:2,title:'old'},'fixture','0101');
+  const salt=Uint8Array.from(Buffer.from(old.salt,'base64'));
+  const key=await deriveKey('fixture','0101',salt,['encrypt','decrypt']);
+  const bytes=new Uint8Array([255,216,1,2,255,217]),photo=await sealPhoto(bytes,key,'same-photo');
+  const updated=await resealAlbum({version:2,title:'new'},old,'fixture','0101');
+  assert.equal(updated.salt,old.salt);assert.notEqual(updated.iv,old.iv);assert.equal((await decryptAlbum(updated,'fixture','0101')).title,'new');
+  const sameKey=await deriveKey('fixture','0101',Uint8Array.from(Buffer.from(updated.salt,'base64')),['decrypt']);
+  assert.deepEqual(await openPhoto(photo,sameKey,'same-photo'),bytes);
+  await assert.rejects(()=>resealAlbum({},old,'wrong','0101'));
 });

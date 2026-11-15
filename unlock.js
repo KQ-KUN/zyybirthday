@@ -1,7 +1,7 @@
-import {createPhotoCache} from './photo-cache.js?v=20261115-9';
-import {openAlbum,openPhoto,normalizeName,normalizeBirthday} from './crypto.js?v=20261115-9';
-import {downloadBytes} from './network.js?v=20261115-9';
-import {startAlbum} from './app.js?v=20261115-9';
+import {createPhotoCache} from './photo-cache.js?v=20261115-10';
+import {openAlbum,openPhoto,normalizeName,normalizeBirthday} from './crypto.js?v=20261115-10';
+import {downloadBytes} from './network.js?v=20261115-10';
+import {startAlbum} from './app.js?v=20261115-10';
 
 const form=document.getElementById('unlock-form');
 const error=document.getElementById('unlock-error');
@@ -63,7 +63,7 @@ form.addEventListener('submit',async(event)=>{
       document.body.classList.remove('album-unlocked');
       disposePhotos();delete window.memoryAlbum;throw e;
     }
-    document.getElementById('map-home').focus();
+    document.getElementById('tour-button').focus();
   }catch(e){error.textContent=e.message?.includes('超时')?e.message:'相册加载失败，请检查网络后再次点击打开。';}
   finally{busy=false;submit.disabled=false;submit.textContent=originalLabel;form.removeAttribute('aria-busy');name='';birthday='';}
 });

@@ -2,6 +2,15 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {localStyle,project} from '../paper-map.js';
+import {administrativeAreas} from '../administrative-areas.js';
+
+test('地图包含真实的市、区县划分，并覆盖主要照片地区',()=>{
+  const city=administrativeAreas.features.filter(feature=>feature.properties.level==='city');
+  const county=administrativeAreas.features.filter(feature=>feature.properties.level==='county');
+  assert(city.length>30);assert(county.length>100);
+  for(const name of ['西湖区','萧山区','新昌县','景宁畲族自治县'])assert(county.some(feature=>feature.properties.name===name));
+  assert(localStyle.layers.some(layer=>layer.id==='city-line'));assert(localStyle.layers.some(layer=>layer.id==='county-line'));
+});
 
 test('地图数据随站点提供，不依赖远程瓦片、字体或图标',()=>{
   assert.equal(localStyle.glyphs,undefined);assert.equal(localStyle.sprite,undefined);

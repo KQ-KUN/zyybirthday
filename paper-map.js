@@ -1,8 +1,9 @@
-import {groupPins} from './pin-groups.js?v=20261115-9';
-import {pushpinSvg} from './pushpin.js?v=20261115-9';
-import {regionLabels} from './region-labels.js?v=20261115-9';
-import {createCameraMotion,mixCamera,mixFlight,cameraEase} from './transitions.js?v=20261115-9';
-import {geography,land} from './geography.js?v=20261115-9';
+import {layoutPins} from './pin-layout.js?v=20261115-10';
+import {administrativeAreas,administrativeLabels} from './administrative-areas.js?v=20261115-10';
+import {pushpinSvg} from './pushpin.js?v=20261115-10';
+import {regionLabels} from './region-labels.js?v=20261115-10';
+import {createCameraMotion,mixCamera,mixFlight,cameraEase} from './transitions.js?v=20261115-10';
+import {geography,land} from './geography.js?v=20261115-10';
 
 export function project([longitude,latitude]) {
   const radians=Math.max(-85,Math.min(85,latitude))*Math.PI/180;
@@ -14,7 +15,7 @@ function paths(geometry) {
 }
 
 // 使用同一份真实地理数据。地图引擎尚未到达或 WebGL 不可用时仍可操作。
-export function createPaperMap(container,places,onSelect,onMove,onGroupSelect) {
+export function createPaperMap(container,places,onSelect,onMove) {
   const surface=document.createElement('div');surface.className='paper-map';surface.tabIndex=0;
   surface.setAttribute('role','region');surface.setAttribute('aria-label','回忆地图，可拖动和缩放');
   const ground=document.createElement('div');ground.className='paper-ground';
@@ -24,26 +25,35 @@ export function createPaperMap(container,places,onSelect,onMove,onGroupSelect) {
   for(const [collection,kind] of [[land,'land'],[geography,'province']])for(const [index,feature] of collection.features.entries()){
     const path=document.createElementNS(svg.namespaceURI,'path');path.setAttribute('d',paths(feature.geometry));path.setAttribute('class',kind);if(kind==='province')path.style.fill=palette[index%palette.length];shapes.append(path);
   }
-  ground.append(svg);surface.append(ground);container.append(surface);
-  let center=project([110,35]),zoom=4,pitch=35,bearing=0,padding={top:0,bottom:0,left:0,right:0};
-  let motion;
-  let pins=[],pinSignature='',selectedPin=null;
-  function refreshPins(){
-    const scale=2**zoom/8,cos=Math.cos(bearing*Math.PI/180),sin=Math.sin(bearing*Math.PI/180);
-    const groups=groupPins(places,coordinates=>{const p=project(coordinates);return {x:(p[0]*cos+p[1]*sin)*scale,y:(-p[0]*sin+p[1]*cos)*scale*Math.cos(pitch*Math.PI/180)};},{selectedId:selectedPin});
-    const signature=groups.map(group=>group.id).join('|');if(signature===pinSignature)return;pinSignature=signature;
-    pins.forEach(pin=>pin.button.remove());pins=[];
-    for(const group of groups){
-      const point=project(group.coordinates),button=document.createElement('button');button.className='paper-pin';button.innerHTML=pushpinSvg;
-      const clustered=group.members.length>1,label=document.createElement('span');label.className='pin-label';label.textContent=group.label;button.append(label);
-      if(clustered){const badge=document.createElement('span');badge.className='pin-count';badge.textContent=String(group.members.length);badge.setAttribute('aria-hidden','true');button.append(badge);}
-      button.dataset.label=clustered?`展开${group.label}`:`打开${group.label}的照片`;button.setAttribute('aria-label',button.dataset.label);
-      button.addEventListener('click',event=>{event.stopPropagation();if(clustered)onGroupSelect?.(group);else onSelect(group.id);});
-      ground.append(button);pins.push({button,point,placeId:group.id});
+  const divisionGroups={};
+  for(const level of ['city','county']){
+    const group=document.createElementNS(svg.namespaceURI,'g');group.classList.add('division-lines');
+    for(const feature of administrativeAreas.features.filter(feature=>feature.properties.level===level)){
+      const path=document.createElementNS(svg.namespaceURI,'path');path.setAttribute('d',paths(feature.geometry));path.setAttribute('class',level+'-boundary');group.append(path);
     }
+    shapes.append(group);divisionGroups[level]=group;
+  }
+  ground.append(svg);surface.append(ground);container.append(surface);
+  let center=project([110,35]),zoom=4,pitch=0,bearing=0,padding={top:0,bottom:0,left:0,right:0};
+  let motion;
+  let selectedPin=null;
+  const leaders=document.createElementNS(svg.namespaceURI,'svg');leaders.classList.add('pin-leaders');leaders.setAttribute('aria-hidden','true');surface.append(leaders);
+  const pins=places.map(place=>{
+    const point=project(place.coordinates),button=document.createElement('button');button.className='paper-pin';button.innerHTML=pushpinSvg;button.dataset.place=place.id;
+    const label=document.createElement('span');label.className='pin-label';label.textContent=place.name;button.append(label);
+    button.dataset.label=`打开${place.name}的照片`;button.setAttribute('aria-label',button.dataset.label);button.addEventListener('click',event=>{event.stopPropagation();onSelect(place.id);});ground.append(button);
+    const line=document.createElementNS(svg.namespaceURI,'line');leaders.append(line);
+    return {button,point,placeId:place.id,offset:[0,0],line};
+  });
+  function screenPoint(coordinates){const point=project(coordinates),scale=2**zoom/8;return {x:surface.clientWidth/2+(padding.left-padding.right)/2+(point[0]-center[0])*scale,y:surface.clientHeight/2+(padding.top-padding.bottom)/2+(point[1]-center[1])*scale};}
+  function refreshPins(){
+    const layout=layoutPins(places,screenPoint,{selectedId:selectedPin,width:surface.clientWidth,height:surface.clientHeight,top:padding.top,bottom:padding.bottom,labelsVisible:zoom>=5.4});
+    for(const pin of pins){pin.offset=layout.get(pin.placeId).offset;pin.button.classList.toggle('show-label',layout.get(pin.placeId).showLabel);}
   }
   function draw(duration=0){
+    container.dataset.view='2d';container.dataset.zoom=zoom.toFixed(2);container.dataset.pitch=String(pitch);
     if(!motion?.isMoving()&&!drag)refreshPins();
+    divisionGroups.city.style.display=zoom>=5?'':'none';divisionGroups.county.style.display=zoom>=7.2?'':'none';
     const scale=2**zoom/8;
     const width=surface.clientWidth*2,height=surface.clientHeight*2;
     ground.style.width=width+'px';ground.style.height=height+'px';svg.setAttribute('viewBox',`0 0 ${width} ${height}`);
@@ -54,13 +64,25 @@ export function createPaperMap(container,places,onSelect,onMove,onGroupSelect) {
     // 变换 SVG 向量坐标，避免放大整张位图造成模糊和过大的手机纹理。
     shapes.style.transitionDuration=duration+'ms';
     shapes.style.transform=`translate(${width/2}px,${height/2}px) scale(${scale}) translate(${-center[0]}px,${-center[1]}px)`;
-    for(const {button,point} of pins){button.style.left=(width/2+(point[0]-center[0])*scale)+'px';button.style.top=(height/2+(point[1]-center[1])*scale)+'px';button.style.transitionDuration=duration+'ms';button.style.transform=`translate(-50%,-100%) rotateZ(${bearing}deg) rotateX(${-pitch}deg)`;}
-    for(const {element,point} of labelNodes){element.style.left=(width/2+(point[0]-center[0])*scale)+'px';element.style.top=(height/2+(point[1]-center[1])*scale)+'px';element.style.transform=`translate(-50%,-50%) rotateX(${-pitch}deg)`;const overlap=pins.some(pin=>Math.abs(pin.point[0]-point[0])*scale<60&&Math.abs(pin.point[1]-point[1])*scale<65);element.style.opacity=!overlap&&zoom>=4&&zoom<=7.9?'1':'0';}
+    for(const {button,point,offset,line} of pins){
+      const x=(point[0]-center[0])*scale,y=(point[1]-center[1])*scale;
+      button.style.left=(width/2+x+offset[0])+'px';button.style.top=(height/2+y+offset[1])+'px';button.style.transform='translate(-50%,-100%)';
+      const sx=surface.clientWidth/2+(padding.left-padding.right)/2+x,sy=surface.clientHeight/2+(padding.top-padding.bottom)/2+y;
+      line.setAttribute('x1',sx);line.setAttribute('y1',sy);line.setAttribute('x2',sx+offset[0]);line.setAttribute('y2',sy+offset[1]);
+    }
+    const occupied=[];
+    for(const {element,point,level} of labelNodes){
+      const x=width/2+(point[0]-center[0])*scale,y=height/2+(point[1]-center[1])*scale;
+      element.style.left=x+'px';element.style.top=y+'px';element.style.transform='translate(-50%,-50%)';
+      const eligible=level==='province'?zoom>=1.5&&zoom<5.4:level==='city'?zoom>=5&&zoom<8.3:zoom>=7.2;
+      const overlap=occupied.some(p=>Math.abs(p.x-x)<52&&Math.abs(p.y-y)<22);
+      element.hidden=!(eligible&&!overlap);if(eligible&&!overlap)occupied.push({x,y});
+    }
     onMove();
   }
-  const labelNodes=regionLabels.map(region=>{
-    const element=document.createElement('span');element.className='map-region-label';element.textContent=region.name;element.setAttribute('aria-hidden','true');
-    ground.append(element);return {element,point:project(region.coordinates)};
+  const labelNodes=[...regionLabels.map(region=>({...region,level:'province'})),...administrativeLabels].map(region=>{
+    const element=document.createElement('span');element.className='map-region-label '+region.level;element.textContent=region.shortName||region.name;element.setAttribute('aria-hidden','true');
+    ground.append(element);return {element,point:project(region.coordinates),level:region.level};
   });
   const current=()=>({center:[...center],zoom,pitch,bearing,padding:{...padding}});
   motion=createCameraMotion(current(),camera=>{({center,zoom,pitch,bearing,padding}=camera);draw();});
@@ -68,11 +90,11 @@ export function createPaperMap(container,places,onSelect,onMove,onGroupSelect) {
   const api={
     isPaper:true,getZoom:()=>zoom,getPitch:()=>pitch,getBearing:()=>bearing,
     getCamera:()=>({center:unproject(center),zoom,pitch,bearing,padding:{...padding}}),
-    updateSelection(id,low){selectedPin=id;for(const {button,placeId} of pins){const active=placeId===id;button.classList.toggle('is-selected',active);button.setAttribute('aria-pressed',String(active));button.setAttribute('aria-label',button.dataset.label);}},
+    updateSelection(id){selectedPin=id;for(const {button,placeId} of pins){const active=placeId===id;button.classList.toggle('is-selected',active);button.setAttribute('aria-pressed',String(active));button.setAttribute('aria-label',button.dataset.label);}},
     stop:()=>motion.stop(),isMoving:()=>motion.isMoving()||Boolean(drag),getSource:()=>null,resize:()=>draw(),
     easeTo(options){
       const target=current();if(options.center)target.center=project(options.center);
-      if(options.zoom!==undefined)target.zoom=Math.max(2.5,Math.min(12,options.zoom));
+      if(options.zoom!==undefined)target.zoom=Math.max(1.5,Math.min(12,options.zoom));
       if(options.pitch!==undefined)target.pitch=options.pitch;if(options.bearing!==undefined)target.bearing=options.bearing;if(options.padding)target.padding=options.padding;
       motion.to(target,options.duration||0,{easing:options.easing||cameraEase,interpolate:options.flight?mixFlight:mixCamera});
     },
@@ -102,9 +124,11 @@ export function createPaperMap(container,places,onSelect,onMove,onGroupSelect) {
 }
 
 const regions={...geography,features:geography.features.map((feature,index)=>({...feature,properties:{...feature.properties,shade:['#edf1e7','#e3eada','#f0eee3','#e8eee1','#e0e9dc'][index%5]}}))};
-export const localStyle={version:8,sources:{land:{type:'geojson',data:land},provinces:{type:'geojson',data:regions}},layers:[
+export const localStyle={version:8,sources:{land:{type:'geojson',data:land},provinces:{type:'geojson',data:regions},divisions:{type:'geojson',data:administrativeAreas}},layers:[
   {id:'sea',type:'background',paint:{'background-color':'#c5dddf'}},
   {id:'land',type:'fill',source:'land',paint:{'fill-color':'#e2e8db'}},
   {id:'province',type:'fill',source:'provinces',paint:{'fill-color':['get','shade'],'fill-opacity':.92}},
-  {id:'province-line',type:'line',source:'provinces',paint:{'line-color':'#a4b5a1','line-width':1.1,'line-opacity':.8}}
+  {id:'city-line',type:'line',source:'divisions',minzoom:5,filter:['==',['get','level'],'city'],paint:{'line-color':'#a3b29a','line-width':.9,'line-opacity':.9}},
+  {id:'county-line',type:'line',source:'divisions',minzoom:7.2,filter:['==',['get','level'],'county'],paint:{'line-color':'#a7b69c','line-width':.75,'line-opacity':.85}},
+  {id:'province-line',type:'line',source:'provinces',paint:{'line-color':'#879e83','line-width':1.25,'line-opacity':.95}}
 ]};

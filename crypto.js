@@ -55,6 +55,17 @@ export async function decryptAlbum(envelope,name,birthday) {
   try {return JSON.parse(decoder.decode(plaintext));}finally{plaintext.fill(0);}
 }
 
+// 更新地点文字时保留照片使用的密钥，以全新 IV 重新认证和加密清单。
+export async function resealAlbum(payload,envelope,name,birthday){
+  await decryptAlbum(envelope,name,birthday);
+  const key=await deriveKey(name,birthday,fromBase64(envelope.salt),['encrypt']);
+  const iv=crypto.getRandomValues(new Uint8Array(12)),plaintext=encoder.encode(JSON.stringify(payload));
+  try{
+    const ciphertext=await crypto.subtle.encrypt({name:'AES-GCM',iv,additionalData:aad,tagLength:128},key,plaintext);
+    return {...envelope,iv:toBase64(iv),ciphertext:toBase64(new Uint8Array(ciphertext))};
+  }finally{plaintext.fill(0);}
+}
+
 export async function openAlbum(envelope,name,birthday) {
   const payload=await decryptAlbum(envelope,name,birthday);
   const key=await deriveKey(name,birthday,fromBase64(envelope.salt),['decrypt']);
