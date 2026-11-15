@@ -1,4 +1,4 @@
-import {decryptAlbum,normalizeName,normalizeBirthday} from './crypto.mjs';
+import {decryptAlbum,normalizeName,normalizeBirthday} from './crypto.js';
 
 const form=document.getElementById('unlock-form');
 const error=document.getElementById('unlock-error');
