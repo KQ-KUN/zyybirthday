@@ -1,11 +1,14 @@
-import {createPaperMap,localStyle} from './paper-map.js?v=20261115-4';
-import {loadScript} from './network.js?v=20261115-4';
+import {createImageSwap,crossfade,cameraEase} from './transitions.js?v=20261115-5';
+import {createPaperMap,localStyle} from './paper-map.js?v=20261115-5';
+import {loadScript} from './network.js?v=20261115-5';
 
 /* 地图位置只用于整理回忆，不用于定位或导航。 */
 'use strict';
 export function startAlbum() {
   const $ = (id) => document.getElementById(id);
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const coverSwap=createImageSwap($('place-cover'),{reduced:reducedMotion,contain:true});
+  const viewerSwap=createImageSwap($('viewer-image'),{reduced:reducedMotion,contain:true});
   const pinSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m4 17 5-5 4 4 3-3 5 5"/></svg>';
   let album;
   let places = [];
@@ -82,6 +85,10 @@ export function startAlbum() {
   }
 
   function cameraPadding(overview = false) {
+    if(window.innerWidth>=560 && window.innerHeight<=500){
+      const side=Math.min(240,Math.max(190,window.innerWidth*.27))+32;
+      return {top:85,bottom:25,left:overview?32:side,right:side};
+    }
     const mobile = window.innerWidth <= 700;
     if (!mobile) return {top:120,bottom:80,left:420,right:80};
     // 小屏幕也要留出可见地图，避免把相机目标挤出画面。
@@ -128,22 +135,27 @@ export function startAlbum() {
     selectedId = id;
     photoPerspective = false;
     $('place-card').hidden = false;
-    $('place-name').textContent = place.name;
-    $('place-region').textContent = place.region;
-    $('place-count').textContent = `${place.photos.length} 张${album.demo ? '示例' : ''}照片`;
-    $('place-card-open').setAttribute('aria-label', `查看${place.name}的 ${place.photos.length} 张照片`);
-    $('place-cover').hidden = !place.photos[0];
-    $('place-photo-view').hidden = !place.photos[0];
-    if (place.photos[0]) {const id=place.id;window.memoryAlbum.loadPhoto(place.photos[0]).then(url=>{if(selectedId===id)$('place-cover').src=url;}).catch(()=>{});}
+    $('place-card').setAttribute('aria-busy','true');
+    const writeDetails=()=>{
+      $('place-name').textContent=place.name;$('place-region').textContent=place.region;
+      $('place-count').textContent=`${place.photos.length} 张${album.demo?'示例':''}照片`;
+      $('place-index').textContent=String(places.indexOf(place)+1).padStart(2,'0');
+      $('place-card-open').setAttribute('aria-label',`查看${place.name}的 ${place.photos.length} 张照片`);
+    };
+    $('place-photo-view').hidden=!place.photos[0];
+    if(place.photos[0])coverSwap.show(place.photos[0],window.memoryAlbum.loadPhoto,()=>{
+      $('place-cover').hidden=false;
+      crossfade(document.querySelector('.place-copy'),writeDetails,{reduced:reducedMotion});
+      $('place-card').removeAttribute('aria-busy');
+    },()=>{writeDetails();$('place-cover').hidden=true;$('place-card').removeAttribute('aria-busy');setStatus(`${place.name}的照片暂时无法加载，可点击地点重试`);});
+    else {coverSwap.cancel();writeDetails();$('place-card').removeAttribute('aria-busy');}
     document.querySelectorAll('.place-tile').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.id === id)));
     updatePerspectiveControls();
     if (mapReady && options.fly !== false) {
       const zoom = options.overview ? 6.2 : 7.5;
-      const zoomSteps = Math.abs(map.getZoom() - zoom);
-      // 跨城市用较平缓的飞行路径，近距离重定位避免先拉远再拉近。
-      const camera = {center:place.coordinates,zoom,pitch:$('map-pitch').getAttribute('aria-pressed') === 'true' ? 46 : 0,bearing:map.getBearing(),padding:cameraPadding(),duration:reducedMotion ? 0 : Math.min(3000,Math.max(1100,zoomSteps * 360)),essential:false};
-      if (zoomSteps > 2) map.flyTo({...camera,curve:1.08});
-      else map.easeTo(camera);
+      const zoomSteps=Math.abs(map.getZoom()-zoom);
+      const camera={center:place.coordinates,zoom,pitch:$('map-pitch').getAttribute('aria-pressed')==='true'?46:0,bearing:map.getBearing(),padding:cameraPadding(),duration:reducedMotion?0:Math.min(1800,1100+zoomSteps*140),easing:cameraEase,essential:false};
+      map.easeTo(camera);
     }
     if (options.hash !== false) writeHash(place);
     setStatus(`已选中${place.name}，${place.photos.length} 张照片`);
@@ -202,43 +214,36 @@ export function startAlbum() {
   }
   async function createMap() {
     if(mapLoading)return;mapLoading=true;
-    $('map-notice').hidden=false;$('map-notice').classList.remove('is-error');
-    $('map-notice').textContent='正在展开地图';
-    const paper=map;let engineReady=false;
+    const paper=map;
     try {
-      await loadScript('vendor/maplibre-gl.js?v=20261115-4',{timeoutMs:8000});
+      await loadScript('vendor/maplibre-gl.js?v=20261115-5',{timeoutMs:8000});
       if(!window.maplibregl)throw new Error('Map engine unavailable');
-      map = new maplibregl.Map({container:'map',style:localStyle,center:[117.5,34],zoom:4.5,minZoom:2,maxZoom:8.5,pitch:35,bearing:0,attributionControl:false,renderWorldCopies:false,maxPitch:68,pixelRatio:Math.min(window.devicePixelRatio || 1,1.5),canvasContextAttributes:{antialias:false},maxTileCacheSize:192});
-      map.getCanvas().setAttribute('aria-label','回忆地图，可用方向键平移，使用加减键缩放');
-      mapTimeout=setTimeout(()=>{if(!engineReady){if(map && !map.isPaper)map.remove();map=paper;mapReady=true;$('map-notice').hidden=true;}},10000);
-      map.on('load',() => {
-        engineReady=true;if(paper?.isPaper)paper.remove();mapReady = true; clearTimeout(mapTimeout);
-        $('map-notice').hidden = true; document.body.classList.remove('map-failed');
-        map.addSource('memories',{type:'geojson',data:{type:'FeatureCollection',features:places.map((p) => ({type:'Feature',geometry:{type:'Point',coordinates:p.coordinates},properties:{id:p.id}}))},cluster:false});
-        map.addLayer({id:'memory-clusters',type:'circle',source:'memories',filter:['has','point_count'],paint:{'circle-color':'#fcfaf4','circle-radius':22,'circle-stroke-color':'#62745b','circle-stroke-width':1.5}});
-        /* 离线底图不加载远程字库。 */
-        map.addLayer({id:'memory-points',type:'circle',source:'memories',filter:['!',['has','point_count']],paint:{'circle-radius':1,'circle-opacity':0}});
-        map.on('click','memory-clusters',async (event) => {
-          const feature=event.features[0];
-          try { const zoom=await map.getSource('memories').getClusterExpansionZoom(feature.properties.cluster_id); map.easeTo({center:feature.geometry.coordinates,zoom,duration:reducedMotion ? 0 : 700}); } catch { setStatus('请放大地图查看地点'); }
+      const engine=new maplibregl.Map({container:'map',style:localStyle,minZoom:2,maxZoom:8.5,attributionControl:false,renderWorldCopies:false,maxPitch:68,pixelRatio:Math.min(window.devicePixelRatio||1,1.5),canvasContextAttributes:{antialias:false},...paper.getCamera()});
+      engine.getCanvas().setAttribute('aria-label','回忆地图，可用方向键平移，使用加减键缩放');
+      let ready=false;
+      mapTimeout=setTimeout(()=>{if(!ready)engine.remove();},10000);
+      engine.on('load',()=>{
+        ready=true;clearTimeout(mapTimeout);
+        // 引擎准备好后接续纸地图当前帧，不再重新飞向默认位置。
+        const camera=paper.getCamera();paper.stop();engine.jumpTo(camera);map=engine;mapReady=true;
+        $('map-notice').hidden=true;
+        engine.addSource('memories',{type:'geojson',data:{type:'FeatureCollection',features:places.map(place=>({type:'Feature',geometry:{type:'Point',coordinates:place.coordinates},properties:{id:place.id}}))}});
+        engine.addLayer({id:'memory-points',type:'circle',source:'memories',paint:{'circle-radius':1,'circle-opacity':0}});
+        engine.on('sourcedata',event=>{if(event.sourceId==='memories' && event.isSourceLoaded)scheduleMarkers();});
+        engine.on('moveend',()=>{
+          photoPerspective=Boolean(selectedId)&&engine.getPitch()>=60;
+          const tilted=engine.getPitch()>1;
+          $('map-pitch').setAttribute('aria-pressed',String(tilted));
+          $('map-pitch').setAttribute('aria-label',tilted?'切换到俯视地图':'切换到三维视角');
+          $('map-pitch').textContent=tilted?'3D':'2D';
+          updatePerspectiveControls();scheduleMarkers();
         });
-        map.on('mouseenter','memory-clusters',() => {map.getCanvas().style.cursor='pointer';});
-        map.on('mouseleave','memory-clusters',() => {map.getCanvas().style.cursor='';});
-        map.on('sourcedata',(event) => {if(event.sourceId==='memories' && event.isSourceLoaded)scheduleMarkers();});
-        map.on('moveend',() => {
-          photoPerspective = Boolean(selectedId) && map.getPitch() >= 60;
-          const threeD = map.getPitch() > 1;
-          $('map-pitch').setAttribute('aria-pressed',String(threeD));
-          $('map-pitch').setAttribute('aria-label',threeD ? '切换到俯视地图' : '切换到三维视角');
-          $('map-pitch').textContent = threeD ? '3D' : '2D';
-          scheduleMarkers();
-        });map.on('idle',scheduleMarkers);
-        if (selectedId) selectPlace(selectedId,{hash:false}); else fitAll();
+        engine.on('idle',scheduleMarkers);engine.once('idle',()=>paper.remove());
+        engine.on('webglcontextlost',mapUnavailable);
+        scheduleMarkers();
       });
-      map.on('error',() => { if(!mapReady && !map.isStyleLoaded())setStatus('正在等待地图资源'); });
-      map.on('webglcontextlost',mapUnavailable);
-      window.addEventListener('resize',() => {if(map)map.resize();});
-    } catch {if(paper?.isPaper){map=paper;mapReady=true;$('map-notice').hidden=true;}else mapUnavailable();} finally {mapLoading=false;}
+    } catch {map=paper;mapReady=true;}
+    finally{mapLoading=false;$('map-notice').hidden=true;}
   }
 
   function flattenPhotos(list) { return list.flatMap((place) => place.photos.map((photo,index) => ({...photo,place,index}))); }
@@ -264,19 +269,27 @@ export function startAlbum() {
     showDialog('viewer');renderViewer();
   }
   function renderViewer() {
-    const photo=activePhotos[photoIndex]; if(!photo)return;
-    $('photo-error').hidden=true;$('viewer-image').hidden=false;
-    window.memoryAlbum.loadPhoto(photo).then(url=>{if(activePhotos[photoIndex]?.id===photo.id)$('viewer-image').src=url;}).catch(()=>{$('photo-error').hidden=false;});$('viewer-image').alt=photo.alt;
-    $('viewer-caption').textContent=photo.place.name;
-    $('viewer-note').textContent=photo.caption || photo.place.note || photo.place.region;
-    $('viewer-counter').textContent=`${String(photoIndex+1).padStart(2,'0')} / ${String(activePhotos.length).padStart(2,'0')}`;
-    $('photo-prev').disabled=photoIndex===0; $('photo-next').disabled=photoIndex===activePhotos.length-1;
-    $('viewer-dots').replaceChildren();
-    if (activePhotos.length<=20) activePhotos.forEach((entry,index) => {
-      const button=document.createElement('button');button.className='viewer-dot';button.setAttribute('aria-label',`第 ${index+1} 张照片`);button.setAttribute('aria-current',String(index===photoIndex));
-      button.addEventListener('click',() => {photoIndex=index;renderViewer();});$('viewer-dots').append(button);
-    });
-    writeHash(photo.place,photo.index);
+    const photo=activePhotos[photoIndex];if(!photo)return;
+    const requestedIndex=photoIndex;
+    $('photo-error').hidden=true;$('viewer-stage').setAttribute('aria-busy','true');$('viewer-map').disabled=true;
+    $('photo-prev').disabled=photoIndex===0;$('photo-next').disabled=photoIndex===activePhotos.length-1;
+    const dots=$('viewer-dots');
+    if(dots.childElementCount!==activePhotos.length && activePhotos.length<=20){
+      dots.replaceChildren();activePhotos.forEach((entry,index)=>{
+        const button=document.createElement('button');button.className='viewer-dot';button.setAttribute('aria-label',`第 ${index+1} 张照片`);
+        button.addEventListener('click',()=>{photoIndex=index;renderViewer();});dots.append(button);
+      });
+    }
+    [...dots.children].forEach((button,index)=>button.setAttribute('aria-current',String(index===photoIndex)));
+    viewerSwap.show(photo,window.memoryAlbum.loadPhoto,()=>{
+      $('viewer-image').hidden=false;$('viewer-stage').removeAttribute('aria-busy');$('viewer-map').disabled=false;
+      crossfade($('viewer-copy'),()=>{
+        $('viewer-caption').textContent=photo.place.name;$('viewer-note').textContent=photo.caption||photo.place.note||photo.place.region;
+      },{reduced:reducedMotion});
+      $('viewer-counter').textContent=`${String(requestedIndex+1).padStart(2,'0')} / ${String(activePhotos.length).padStart(2,'0')}`;
+      writeHash(photo.place,photo.index);
+      const next=activePhotos[requestedIndex+1];if(next)window.memoryAlbum.loadPhoto(next).catch(()=>{});
+    },()=>{$('viewer-stage').removeAttribute('aria-busy');$('photo-error').hidden=false;});
   }
   function nextPhoto(delta) { const target=photoIndex+delta; if(target>=0 && target<activePhotos.length){photoIndex=target;renderViewer();} }
   function stopTour() {
@@ -312,18 +325,18 @@ export function startAlbum() {
   $('letter-open').addEventListener('click',() => showDialog('letter-dialog'));
   $('credits-open').addEventListener('click',() => {showDialog('credits-dialog');loadCredits();});
   $('gallery-open').addEventListener('click',() => {stopTour();openGallery();});
-  $('place-card-open').addEventListener('click',() => openGallery(places.find((p) => p.id===selectedId)));
+  $('place-card-open').addEventListener('click',() => {if($('place-card').getAttribute('aria-busy')!=='true')openGallery(places.find((p) => p.id===selectedId));});
   $('place-photo-view').addEventListener('click',() => setPhotoPerspective(selectedId));
-  $('place-close').addEventListener('click',() => {$('place-card').hidden=true;});
+  $('place-close').addEventListener('click',() => {coverSwap.cancel();$('place-card').hidden=true;});
   $('tour-button').addEventListener('click',tourStep);
-  $('map-home').addEventListener('click',() => {stopTour();selectedId=null;$('place-card').hidden=true;writeHash(null);document.querySelectorAll('.place-tile,.map-marker').forEach((b)=>b.setAttribute('aria-pressed','false'));fitAll();});
+  $('map-home').addEventListener('click',() => {stopTour();selectedId=null;coverSwap.cancel();$('place-card').hidden=true;writeHash(null);document.querySelectorAll('.place-tile,.map-marker').forEach((b)=>b.setAttribute('aria-pressed','false'));fitAll();});
   $('map-pitch').addEventListener('click',() => {if(!mapReady)return;const on=$('map-pitch').getAttribute('aria-pressed')!=='true';map.stop();photoPerspective=false;updatePerspectiveControls();$('map-pitch').setAttribute('aria-pressed',String(on));$('map-pitch').setAttribute('aria-label',on?'切换到俯视地图':'切换到三维视角');$('map-pitch').textContent=on?'3D':'2D';map.easeTo({pitch:on?46:0,duration:reducedMotion?0:650,essential:false});});
   $('map-zoom-in').addEventListener('click',() => {if(mapReady)map.zoomIn({duration:reducedMotion?0:300});});
   $('map-zoom-out').addEventListener('click',() => {if(mapReady)map.zoomOut({duration:reducedMotion?0:300});});
   $('photo-prev').addEventListener('click',()=>nextPhoto(-1));$('photo-next').addEventListener('click',()=>nextPhoto(1));
   $('viewer-image').addEventListener('error',() => {$('viewer-image').hidden=true;$('photo-error').hidden=false;});
   $('viewer').addEventListener('keydown',(event) => {if(event.key==='ArrowRight'){event.preventDefault();nextPhoto(1);}if(event.key==='ArrowLeft'){event.preventDefault();nextPhoto(-1);}});
-  $('viewer').addEventListener('close',() => {const photo=activePhotos[photoIndex];if(photo)writeHash(photo.place);if(viewerTrigger && viewerTrigger.isConnected)viewerTrigger.focus();});
+  $('viewer').addEventListener('close',() => {viewerSwap.cancel();const photo=activePhotos[photoIndex];if(photo)writeHash(photo.place);if(viewerTrigger && viewerTrigger.isConnected)viewerTrigger.focus();});
   $('viewer-map').addEventListener('click',() => {const photo=activePhotos[photoIndex];closeDialog('viewer');closeDialog('photos-dialog');if(photo){stopTour();selectPlace(photo.place.id);$('place-card-open').focus();}});
   $('viewer-stage').addEventListener('touchstart',(event) => {touchStart=event.touches.length===1?{x:event.touches[0].clientX,y:event.touches[0].clientY}:null;},{passive:true});
   $('viewer-stage').addEventListener('touchend',(event) => {if(!touchStart || !event.changedTouches.length)return;const dx=event.changedTouches[0].clientX-touchStart.x,dy=event.changedTouches[0].clientY-touchStart.y;if(Math.abs(dx)>60 && Math.abs(dx)>Math.abs(dy)*1.5)nextPhoto(dx<0?1:-1);touchStart=null;},{passive:true});

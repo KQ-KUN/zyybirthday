@@ -1,4 +1,5 @@
-import {geography,land} from './geography.js?v=20261115-4';
+import {createCameraMotion} from './transitions.js?v=20261115-5';
+import {geography,land} from './geography.js?v=20261115-5';
 
 export function project([longitude,latitude]) {
   const radians=Math.max(-85,Math.min(85,latitude))*Math.PI/180;
@@ -21,6 +22,7 @@ export function createPaperMap(container,places,onSelect,onMove) {
   }
   ground.append(svg);surface.append(ground);container.append(surface);
   let center=project([110,35]),zoom=4,pitch=35,bearing=0,padding={top:0,bottom:0,left:0,right:0};
+  let motion;
   const pins=[];
   for(const place of places){
     const point=project(place.coordinates),button=document.createElement('button');button.className='paper-pin';button.setAttribute('aria-label',`打开${place.name}的照片`);
@@ -44,24 +46,33 @@ export function createPaperMap(container,places,onSelect,onMove) {
     for(const {button,point} of pins){button.style.left=(width/2+(point[0]-center[0])*scale)+'px';button.style.top=(height/2+(point[1]-center[1])*scale)+'px';button.style.transitionDuration=duration+'ms';button.style.transform=`translate(-50%,-100%) rotateZ(${bearing}deg) rotateX(${-pitch}deg)`;}
     onMove();
   }
+  const current=()=>({center:[...center],zoom,pitch,bearing,padding:{...padding}});
+  motion=createCameraMotion(current(),camera=>{({center,zoom,pitch,bearing,padding}=camera);draw();});
+  const unproject=point=>[(point[0]/4096*360)-180,Math.atan(Math.sinh(Math.PI*(1-2*point[1]/4096)))*180/Math.PI];
   const api={
     isPaper:true,getZoom:()=>zoom,getPitch:()=>pitch,getBearing:()=>bearing,
-    stop(){},isMoving:()=>false,getSource:()=>null,resize:()=>draw(),
-    easeTo(options){if(options.center)center=project(options.center);if(options.zoom!==undefined)zoom=Math.max(2.5,Math.min(8.2,options.zoom));if(options.pitch!==undefined)pitch=options.pitch;if(options.bearing!==undefined)bearing=options.bearing;if(options.padding)padding=options.padding;draw(options.duration||0);},
+    getCamera:()=>({center:unproject(center),zoom,pitch,bearing,padding:{...padding}}),
+    stop:()=>motion.stop(),isMoving:()=>motion.isMoving(),getSource:()=>null,resize:()=>draw(),
+    easeTo(options){
+      const target=current();if(options.center)target.center=project(options.center);
+      if(options.zoom!==undefined)target.zoom=Math.max(2.5,Math.min(8.2,options.zoom));
+      if(options.pitch!==undefined)target.pitch=options.pitch;if(options.bearing!==undefined)target.bearing=options.bearing;if(options.padding)target.padding=options.padding;
+      motion.to(target,options.duration||0);
+    },
     flyTo(options){api.easeTo(options);},
     fitPlaces(list,options){
       const points=list.map(place=>project(place.coordinates)),xs=points.map(p=>p[0]),ys=points.map(p=>p[1]);
-      padding=options.padding;center=[(Math.min(...xs)+Math.max(...xs))/2,(Math.min(...ys)+Math.max(...ys))/2];
-      const width=Math.max(100,surface.clientWidth-padding.left-padding.right),height=Math.max(120,surface.clientHeight-padding.top-padding.bottom);
-      zoom=Math.min(options.maxZoom,Math.log2(16*Math.min(width/Math.max(30,Math.max(...xs)-Math.min(...xs)),height/Math.max(30,Math.max(...ys)-Math.min(...ys)))));
-      pitch=options.pitch;bearing=0;draw(options.duration);
+      const target=current();target.padding=options.padding;target.center=[(Math.min(...xs)+Math.max(...xs))/2,(Math.min(...ys)+Math.max(...ys))/2];
+      const width=Math.max(100,surface.clientWidth-target.padding.left-target.padding.right),height=Math.max(120,surface.clientHeight-target.padding.top-target.padding.bottom);
+      target.zoom=Math.min(options.maxZoom,Math.log2(16*Math.min(width/Math.max(30,Math.max(...xs)-Math.min(...xs)),height/Math.max(30,Math.max(...ys)-Math.min(...ys)))));
+      target.pitch=options.pitch;target.bearing=0;motion.to(target,options.duration||0);
     },
     zoomIn(){api.easeTo({zoom:zoom+.7,duration:300});},zoomOut(){api.easeTo({zoom:zoom-.7,duration:300});},
-    remove(){surface.remove();window.removeEventListener('resize',resize);}
+    remove(){motion.stop();surface.remove();window.removeEventListener('resize',resize);}
   };
   let drag;
-  surface.addEventListener('pointerdown',event=>{if(event.target.closest('button'))return;drag={x:event.clientX,y:event.clientY,center:[...center]};surface.setPointerCapture(event.pointerId);});
-  surface.addEventListener('pointermove',event=>{if(!drag)return;const scale=2**zoom/16;center=[drag.center[0]-(event.clientX-drag.x)/scale,drag.center[1]-(event.clientY-drag.y)/scale/Math.max(.4,Math.cos(pitch*Math.PI/180))];draw();});
+  surface.addEventListener('pointerdown',event=>{if(event.target.closest('button'))return;motion.stop();drag={x:event.clientX,y:event.clientY,center:[...center]};surface.setPointerCapture(event.pointerId);});
+  surface.addEventListener('pointermove',event=>{if(!drag)return;const scale=2**zoom/16;const target=current();target.center=[drag.center[0]-(event.clientX-drag.x)/scale,drag.center[1]-(event.clientY-drag.y)/scale/Math.max(.4,Math.cos(pitch*Math.PI/180))];motion.to(target,0);});
   surface.addEventListener('pointerup',()=>{drag=null;});surface.addEventListener('pointercancel',()=>{drag=null;});
   surface.addEventListener('wheel',event=>{event.preventDefault();api.easeTo({zoom:zoom-Math.sign(event.deltaY)*.3,duration:180});},{passive:false});
   surface.addEventListener('keydown',event=>{if(event.key==='+'||event.key==='='){event.preventDefault();api.zoomIn();}if(event.key==='-'){event.preventDefault();api.zoomOut();}});
