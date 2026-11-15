@@ -1,9 +1,9 @@
-import {layoutPins} from './pin-layout.js?v=20261115-10';
-import {administrativeAreas,administrativeLabels} from './administrative-areas.js?v=20261115-10';
-import {pushpinSvg} from './pushpin.js?v=20261115-10';
-import {regionLabels} from './region-labels.js?v=20261115-10';
-import {createCameraMotion,mixCamera,mixFlight,cameraEase} from './transitions.js?v=20261115-10';
-import {geography,land} from './geography.js?v=20261115-10';
+import {layoutPins} from './pin-layout.js?v=20261115-11';
+import {administrativeAreas,administrativeLabels} from './administrative-areas.js?v=20261115-11';
+import {pushpinSvg} from './pushpin.js?v=20261115-11';
+import {regionLabels} from './region-labels.js?v=20261115-11';
+import {createCameraMotion,mixCamera,mixFlight,cameraEase} from './transitions.js?v=20261115-11';
+import {geography,land} from './geography.js?v=20261115-11';
 
 export function project([longitude,latitude]) {
   const radians=Math.max(-85,Math.min(85,latitude))*Math.PI/180;

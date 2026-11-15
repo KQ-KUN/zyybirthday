@@ -1,10 +1,10 @@
-import {layoutPins} from './pin-layout.js?v=20261115-10';
-import {administrativeLabels} from './administrative-areas.js?v=20261115-10';
-import {pushpinSvg} from './pushpin.js?v=20261115-10';
-import {regionLabels} from './region-labels.js?v=20261115-10';
-import {createImageSwap,crossfade,cameraEase,regionMovement} from './transitions.js?v=20261115-10';
-import {createPaperMap,localStyle} from './paper-map.js?v=20261115-10';
-import {loadScript} from './network.js?v=20261115-10';
+import {layoutPins} from './pin-layout.js?v=20261115-11';
+import {administrativeLabels} from './administrative-areas.js?v=20261115-11';
+import {pushpinSvg} from './pushpin.js?v=20261115-11';
+import {regionLabels} from './region-labels.js?v=20261115-11';
+import {createImageSwap,crossfade,cameraEase,regionMovement} from './transitions.js?v=20261115-11';
+import {createPaperMap,localStyle} from './paper-map.js?v=20261115-11';
+import {loadScript} from './network.js?v=20261115-11';
 
 /* 地图位置只用于整理回忆，不用于定位或导航。 */
 'use strict';
@@ -239,7 +239,7 @@ export function startAlbum() {
     if(mapLoading)return;mapLoading=true;
     const paper=map;
     try {
-      await loadScript('vendor/maplibre-gl.js?v=20261115-10',{timeoutMs:8000});
+      await loadScript('vendor/maplibre-gl.js?v=20261115-11',{timeoutMs:8000});
       if(!window.maplibregl)throw new Error('Map engine unavailable');
       const engine=new maplibregl.Map({container:'map',style:localStyle,minZoom:1.5,maxZoom:12,attributionControl:false,renderWorldCopies:false,maxPitch:0,pixelRatio:Math.min(window.devicePixelRatio||1,1.5),canvasContextAttributes:{antialias:false},...paper.getCamera()});
       engine.dragRotate.disable();engine.touchZoomRotate.disableRotation();

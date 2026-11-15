@@ -28,7 +28,7 @@ export function layoutPins(places,toScreen,{selectedId=null,width=375,height=812
   for(const place of ordered){
     const item=result.get(place.id),w=Math.min(110,place.name?place.name.length*10+12:60);
     const right=item.anchor.x+item.offset[0]-14,topY=item.anchor.y+item.offset[1]-32;
-    const rect={left:right-w,right,top:topY,bottom:topY+21};
+    const rect={left:right-w,right,top:topY,bottom:topY+25};
     const overlap=labelRects.some(other=>rect.left<other.right+5&&rect.right>other.left-5&&rect.top<other.bottom+3&&rect.bottom>other.top-3);
     item.showLabel=place.id===selectedId||labelsVisible&&!overlap;
     if(item.showLabel)labelRects.push(rect);

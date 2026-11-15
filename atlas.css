@@ -282,3 +282,5 @@ button:focus-visible,a:focus-visible{outline-color:var(--forest)}.album-sidebar 
 @media(max-width:360px){.masthead .eyebrow{display:none}.masthead h1{font-size:25px}.place-copy strong{font-size:25px}.dock-actions button{padding:8px 12px}.place-photo-view{height:125px}}
 
 .map-marker[aria-pressed="true"],.paper-pin.is-selected{z-index:8}
+
+.map-marker.show-label .pin-label,.paper-pin.show-label .pin-label,.map-marker[aria-pressed="true"] .pin-label,.paper-pin.is-selected .pin-label,.map-marker:focus-visible .pin-label,.paper-pin:focus-visible .pin-label{pointer-events:auto;padding-top:4px;padding-bottom:4px}
