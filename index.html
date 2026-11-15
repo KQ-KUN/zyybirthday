@@ -11,9 +11,9 @@
   <title>给妈妈的地图相册</title>
   <link rel="icon" href="assets/album-mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="vendor/maplibre-gl.css">
-  <link rel="stylesheet" href="style.css?v=20261115-7">
-  <link rel="stylesheet" href="atlas.css?v=20261115-7">
-  <script src="unlock.js?v=20261115-7" type="module"></script>
+  <link rel="stylesheet" href="style.css?v=20261115-8">
+  <link rel="stylesheet" href="atlas.css?v=20261115-8">
+  <script src="unlock.js?v=20261115-8" type="module"></script>
 </head>
 <body>
   <section id="unlock-screen" class="unlock-screen" aria-labelledby="unlock-title">
@@ -44,7 +44,7 @@
 
       <div class="album-content">
     <section id="place-card" class="place-card" aria-label="选中的地点" hidden>
-      <div class="place-photo-frame"><button id="place-photo-view" class="place-photo-view" aria-label="切换到低角度视角"><img id="place-cover" alt="" width="110" height="92"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 16 9-9 9 9-9 4zM12 7v13"/></svg></button><button id="card-expand" class="card-expand" aria-label="放大当前照片"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h5m8 0h5v-5"/></svg></button></div>
+      <div class="place-photo-frame"><button id="place-photo-view" class="place-photo-view" aria-label="全屏查看当前照片" aria-haspopup="dialog"><img id="place-cover" alt="" width="110" height="92"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h5m8 0h5v-5"/></svg></button></div>
       <div id="card-photo-nav" class="card-photo-nav"><button id="card-prev" aria-label="地点上一张照片">‹</button><span id="card-counter" aria-live="polite"></span><button id="card-next" aria-label="地点下一张照片">›</button></div>
       <button id="place-card-open" class="place-card-open"><span class="place-copy"><span id="place-region" class="eyebrow"></span><strong id="place-name"></strong><span id="place-count"></span></span><span id="place-index" class="place-index" aria-hidden="true"></span><svg class="card-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 19 5M5 5h14v14"/></svg></button>
       <button id="place-close" class="card-close" aria-label="收起地点卡片">×</button>

@@ -1,7 +1,7 @@
-import {pushpinSvg} from './pushpin.js?v=20261115-7';
-import {regionLabels} from './region-labels.js?v=20261115-7';
-import {createCameraMotion,mixCamera,mixFlight,cameraEase} from './transitions.js?v=20261115-7';
-import {geography,land} from './geography.js?v=20261115-7';
+import {pushpinSvg} from './pushpin.js?v=20261115-8';
+import {regionLabels} from './region-labels.js?v=20261115-8';
+import {createCameraMotion,mixCamera,mixFlight,cameraEase} from './transitions.js?v=20261115-8';
+import {geography,land} from './geography.js?v=20261115-8';
 
 export function project([longitude,latitude]) {
   const radians=Math.max(-85,Math.min(85,latitude))*Math.PI/180;
