@@ -40,13 +40,14 @@ export function crossfade(element,update,{duration=280,reduced=false,contain=fal
 }
 
 export function createImageSwap(image,{reduced=false,contain=false}={}) {
-  let revision=0,currentRelease=null,pendingResolve=null,layers=[];
+  let revision=0,currentRelease=null,pendingResolve=null,layers=[],currentPhotoId=null;
   function freeze(){for(const layer of layers){layer.node.style.opacity=getComputedStyle(layer.node).opacity;layer.animation.cancel();}}
   function clearLayers(){for(const layer of layers){layer.animation.cancel();layer.node.remove();layer.release?.();}layers=[];}
   image.style.opacity='1';image.style.transition='none';
   return {
-    cancel(){revision++;pendingResolve?.(false);pendingResolve=null;clearLayers();image.removeAttribute('src');currentRelease?.();currentRelease=null;},
+    cancel(){revision++;pendingResolve?.(false);pendingResolve=null;clearLayers();image.removeAttribute('src');currentRelease?.();currentRelease=null;currentPhotoId=null;},
     show(photo,load,onCommit=()=>{},onError=()=>{}){
+      if(currentPhotoId===photo.id&&image.dataset.quality==='full'&&!layers.length){revision++;pendingResolve?.(false);pendingResolve=null;onCommit('full');return Promise.resolve(true);}
       const ticket=++revision;freeze();pendingResolve?.(false);let shown=false;
       const first=new Promise(resolve=>{pendingResolve=resolve;});
       async function stage(source,quality){
@@ -64,7 +65,10 @@ export function createImageSwap(image,{reduced=false,contain=false}={}) {
             try{await animation.finished;}catch{return false;}
             if(ticket!==revision)return false;
           }
-          image.src=url;image.alt=photo.alt||'';image.dataset.quality=quality;image.hidden=false;
+          image.src=url;image.hidden=false;
+          // 覆盖层一直保留到实际显示的 img 也完成解码，避免旧底图在交接帧闪回。
+          await image.decode();if(ticket!==revision)return false;
+          image.alt=photo.alt||'';image.dataset.quality=quality;image.dataset.photoId=photo.id;currentPhotoId=photo.id;
           const previous=currentRelease;currentRelease=release;kept=true;if(layer)layer.release=null;clearLayers();previous?.();shown=true;onCommit(quality);pendingResolve?.(true);pendingResolve=null;return true;
         }finally{if(!kept)release();}
       }

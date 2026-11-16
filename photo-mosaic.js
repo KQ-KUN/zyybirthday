@@ -52,4 +52,4 @@ export function createPhotoMosaic(canvas,{photos,loadPhoto,reduced=false,onOpenP
   if(!reduced){const started=performance.now();const tick=now=>{progress=Math.min(1,(now-started)/1900);draw();if(progress<1)frame=requestAnimationFrame(tick);};frame=requestAnimationFrame(tick);}
   return ()=>{active=false;cancelAnimationFrame(frame);canvas.removeEventListener('click',open);releases.forEach(release=>release());tiles.forEach(tile=>{tile.canvas.width=tile.canvas.height=1;});};
 }
-import {birthdayLettering} from './birthday-lettering.js?v=20261116-17';
+import {birthdayLettering} from './birthday-lettering.js?v=20261116-19';

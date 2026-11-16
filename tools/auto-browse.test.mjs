@@ -14,3 +14,11 @@ test('首图加载完成后才开始计时，停止后的迟到加载不能重�
   const timer=clock();let ready;const tour=createAutoBrowse({getPlaces:()=>[{id:'a',photos:[0,1]}],onPlace:()=>new Promise(resolve=>{ready=resolve;}),onPhoto:()=>{},setTimer:timer.set,clearTimer:timer.clear});
   tour.start();assert.equal(timer.size,0);tour.stop();ready(true);await flush();assert.equal(timer.size,0);assert.equal(tour.active,false);
 });
+
+test('单张保持到下一地区，两张和三张播完后不会先闪回第一张',async()=>{
+  const timer=clock(),seen=[],places=[{id:'a',photos:[0]},{id:'b',photos:[0,1]},{id:'c',photos:[0,1,2]},{id:'d',photos:[0]}];let place;
+  const tour=createAutoBrowse({getPlaces:()=>places,onPlace:async(p,index)=>{place=p.id;seen.push([place,index]);return true;},onPhoto:index=>seen.push([place,index]),setTimer:timer.set,clearTimer:timer.clear});
+  tour.start();await flush();await timer.advance(4999);assert.deepEqual(seen,[['a',0]]);await timer.advance(1);assert.deepEqual(seen.at(-1),['b',0]);
+  await timer.advance(4999);assert.deepEqual(seen,[['a',0],['b',0],['b',1]]);await timer.advance(1);await timer.advance(4999);assert.deepEqual(seen.slice(-3),[['c',0],['c',1],['c',2]]);
+  await timer.advance(1);assert.deepEqual(seen.at(-1),['d',0]);tour.stop();
+});

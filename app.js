@@ -1,16 +1,18 @@
-import {createLazyPhotos} from './lazy-photos.js?v=20261116-17';
-import {createAutoBrowse} from './auto-browse.js?v=20261116-17';
-import {layoutPins,applyPinLabel} from './pin-layout.js?v=20261116-17';
-import {administrativeLabels} from './administrative-areas.js?v=20261116-17';
-import {pushpinSvg} from './pushpin.js?v=20261116-17';
-import {regionLabels} from './region-labels.js?v=20261116-17';
-import {createImageSwap,crossfade,cameraEase,regionMovement} from './transitions.js?v=20261116-17';
-import {createPaperMap,localStyle} from './paper-map.js?v=20261116-17';
-import {loadScript} from './network.js?v=20261116-17';
-import {createViewHistory} from './view-history.js?v=20261116-17';
-import {playBirthdayIntro} from './birthday-intro.js?v=20261116-17';
-import {mergeLocalPlaces} from './local-album.js?v=20261116-17';
-import {bindLocalUpload,uploadLocations} from './local-upload.js?v=20261116-17';
+import {createLazyPhotos} from './lazy-photos.js?v=20261116-19';
+import {createAutoBrowse} from './auto-browse.js?v=20261116-19';
+import {layoutPins,applyPinLabel} from './pin-layout.js?v=20261116-19';
+import {administrativeLabels} from './administrative-areas.js?v=20261116-19';
+import {pushpinSvg} from './pushpin.js?v=20261116-19';
+import {regionLabels} from './region-labels.js?v=20261116-19';
+import {createImageSwap,crossfade,cameraEase,regionMovement} from './transitions.js?v=20261116-19';
+import {createPaperMap,localStyle} from './paper-map.js?v=20261116-19';
+import {loadScript} from './network.js?v=20261116-19';
+import {createViewHistory} from './view-history.js?v=20261116-19';
+import {playBirthdayIntro} from './birthday-intro.js?v=20261116-19';
+import {mergeLocalPlaces} from './local-album.js?v=20261116-19';
+import {bindLocalUpload,uploadLocations} from './local-upload.js?v=20261116-19';
+import {mountMusicPlayer} from './music-player.js?v=20261116-19';
+import {musicTracks} from './music-tracks.js?v=20261116-19';
 
 /* 地图位置只用于整理回忆，不用于定位或导航。 */
 'use strict';
@@ -30,6 +32,7 @@ export function startAlbum() {
   let detailTilted=true;
   let navigation=null,applyingHistory=false,dialogStack=[],galleryPlaceIds=[],deferredDialog=null;
   let homeRequested=false;
+  const music=mountMusicPlayer({tracks:musicTracks,root:$('app')});
 
   let activePhotos = [];
   let photoIndex = 0;
@@ -123,7 +126,7 @@ export function startAlbum() {
       }
       navigation?.replace(captureView());
       document.body.dataset.navigationDepth=String(navigation?.depth||0);
-    }finally{applyingHistory=false;if(homeRequested){homeRequested=false;fitAll(true);}if(deferredDialog){const id=deferredDialog;deferredDialog=null;showDialog(id);}}
+    }finally{applyingHistory=false;if(homeRequested){homeRequested=false;showBirthdayIntro();}if(deferredDialog){const id=deferredDialog;deferredDialog=null;showDialog(id);}}
   }
   function chooseRegion(id){
     const view={placeId:id,cardIndex:0,dialogs:[]};
@@ -145,6 +148,7 @@ export function startAlbum() {
       if(map?.isPaper)requestAnimationFrame(()=>createMap());
     }});
   }
+  window.addEventListener('pagehide',()=>music.dispose(),{once:true});
   async function applyLocalAdditions(additions,id){
     autoBrowse.stop();
     hiddenIds=new Set(await window.memoryAlbum.localStore.hiddenIds());allPlaces=mergeLocalPlaces(window.memoryAlbum.basePlaces,additions);places=allPlaces.filter(place=>!hiddenIds.has(place.id));validateAlbum({...album,places});album.places=places;renderStrip();$('tour-button').disabled=!places.length;uploadUI?.refresh();
@@ -313,7 +317,7 @@ export function startAlbum() {
     if(mapLoading)return;mapLoading=true;
     const paper=map;
     try {
-      await loadScript('vendor/maplibre-gl.js?v=20261116-17-map',{timeoutMs:8000});
+      await loadScript('vendor/maplibre-gl.js?v=20261116-19-map',{timeoutMs:8000});
       if(!window.maplibregl)throw new Error('Map engine unavailable');
       const engine=new maplibregl.Map({container:'map',style:localStyle,minZoom:1.5,maxZoom:12,attributionControl:false,renderWorldCopies:false,maxPitch:68,pixelRatio:Math.min(window.devicePixelRatio||1,1.5),canvasContextAttributes:{antialias:false},...paper.getCamera()});
       engine.dragRotate.disable();engine.touchZoomRotate.disableRotation();

@@ -1,9 +1,9 @@
-import {createDeviceStore} from './device-store.js?v=20261116-17';
-import {createPhotoRepository} from './photo-repository.js?v=20261116-17';
-import {createPhotoCache} from './photo-cache.js?v=20261116-17';
-import {openAlbum,deriveKey,decryptAlbumWithKey,normalizeName,normalizeBirthday} from './crypto.js?v=20261116-17';
-import {startAlbum} from './app.js?v=20261116-17';
-import {createLocalAlbum,mergeLocalPlaces} from './local-album.js?v=20261116-17';
+import {createDeviceStore} from './device-store.js?v=20261116-19';
+import {createPhotoRepository} from './photo-repository.js?v=20261116-19';
+import {createPhotoCache} from './photo-cache.js?v=20261116-19';
+import {openAlbum,deriveKey,decryptAlbumWithKey,normalizeName,normalizeBirthday} from './crypto.js?v=20261116-19';
+import {startAlbum} from './app.js?v=20261116-19';
+import {createLocalAlbum,mergeLocalPlaces} from './local-album.js?v=20261116-19';
 
 const form=document.getElementById('unlock-form');
 const error=document.getElementById('unlock-error');
@@ -38,7 +38,7 @@ async function enter(payload,key){
   try{startAlbum();}
   catch(error){document.getElementById('unlock-screen').hidden=false;document.getElementById('app').hidden=true;document.body.classList.remove('album-unlocked');disposePhotos();delete window.memoryAlbum;throw error;}
   document.body.dataset.unlockMode='device';
-  if('serviceWorker' in navigator)setTimeout(()=>navigator.serviceWorker.register('service-worker.js?v=20261116-17').then(()=>navigator.serviceWorker.ready).then(()=>{document.body.dataset.offlineShell='ready';}).catch(()=>{}),2500);
+  if('serviceWorker' in navigator)setTimeout(()=>navigator.serviceWorker.register('service-worker.js?v=20261116-19').then(()=>navigator.serviceWorker.ready).then(()=>{document.body.dataset.offlineShell='ready';}).catch(()=>{}),2500);
 }
 form.addEventListener('submit',async(event)=>{
   event.preventDefault();if(busy)return;error.textContent='';

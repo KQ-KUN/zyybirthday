@@ -1,5 +1,5 @@
-import {mosaicPhotos,createPhotoMosaic} from './photo-mosaic.js?v=20261116-17';
-import {ribbonPhotos,createPhotoRibbon} from './photo-ribbon.js?v=20261116-17';
+import {mosaicPhotos,createPhotoMosaic} from './photo-mosaic.js?v=20261116-19';
+import {ribbonPhotos,createPhotoRibbon} from './photo-ribbon.js?v=20261116-19';
 const running=new WeakMap();
 
 export function birthdayLabel(value){
