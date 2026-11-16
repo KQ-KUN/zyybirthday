@@ -1,18 +1,18 @@
-import {createLazyPhotos} from './lazy-photos.js?v=20261116-19';
-import {createAutoBrowse} from './auto-browse.js?v=20261116-19';
-import {layoutPins,applyPinLabel} from './pin-layout.js?v=20261116-19';
-import {administrativeLabels} from './administrative-areas.js?v=20261116-19';
-import {pushpinSvg} from './pushpin.js?v=20261116-19';
-import {regionLabels} from './region-labels.js?v=20261116-19';
-import {createImageSwap,crossfade,cameraEase,regionMovement} from './transitions.js?v=20261116-19';
-import {createPaperMap,localStyle} from './paper-map.js?v=20261116-19';
-import {loadScript} from './network.js?v=20261116-19';
-import {createViewHistory} from './view-history.js?v=20261116-19';
-import {playBirthdayIntro} from './birthday-intro.js?v=20261116-19';
-import {mergeLocalPlaces} from './local-album.js?v=20261116-19';
-import {bindLocalUpload,uploadLocations} from './local-upload.js?v=20261116-19';
-import {mountMusicPlayer} from './music-player.js?v=20261116-19';
-import {musicTracks} from './music-tracks.js?v=20261116-19';
+import {createLazyPhotos} from './lazy-photos.js?v=20261116-21';
+import {createAutoBrowse} from './auto-browse.js?v=20261116-21';
+import {layoutPins,applyPinLabel} from './pin-layout.js?v=20261116-21';
+import {administrativeLabels} from './administrative-areas.js?v=20261116-21';
+import {pushpinSvg} from './pushpin.js?v=20261116-21';
+import {regionLabels} from './region-labels.js?v=20261116-21';
+import {createImageSwap,crossfade,cameraEase,regionMovement} from './transitions.js?v=20261116-21';
+import {createPaperMap,localStyle} from './paper-map.js?v=20261116-21';
+import {loadScript} from './network.js?v=20261116-21';
+import {createViewHistory} from './view-history.js?v=20261116-21';
+import {playBirthdayIntro} from './birthday-intro.js?v=20261116-21';
+import {mergeLocalPlaces} from './local-album.js?v=20261116-21';
+import {bindLocalUpload,uploadLocations} from './local-upload.js?v=20261116-21';
+import {mountMusicPlayer} from './music-player.js?v=20261116-21';
+import {musicTracks} from './music-tracks.js?v=20261116-21';
 
 /* 地图位置只用于整理回忆，不用于定位或导航。 */
 'use strict';
@@ -32,7 +32,7 @@ export function startAlbum() {
   let detailTilted=true;
   let navigation=null,applyingHistory=false,dialogStack=[],galleryPlaceIds=[],deferredDialog=null;
   let homeRequested=false;
-  const music=mountMusicPlayer({tracks:musicTracks,root:$('app')});
+  const music=mountMusicPlayer({tracks:musicTracks,root:document.querySelector('.header-actions')});
 
   let activePhotos = [];
   let photoIndex = 0;
@@ -317,7 +317,7 @@ export function startAlbum() {
     if(mapLoading)return;mapLoading=true;
     const paper=map;
     try {
-      await loadScript('vendor/maplibre-gl.js?v=20261116-19-map',{timeoutMs:8000});
+      await loadScript('vendor/maplibre-gl.js?v=20261116-21-map',{timeoutMs:8000});
       if(!window.maplibregl)throw new Error('Map engine unavailable');
       const engine=new maplibregl.Map({container:'map',style:localStyle,minZoom:1.5,maxZoom:12,attributionControl:false,renderWorldCopies:false,maxPitch:68,pixelRatio:Math.min(window.devicePixelRatio||1,1.5),canvasContextAttributes:{antialias:false},...paper.getCamera()});
       engine.dragRotate.disable();engine.touchZoomRotate.disableRotation();
@@ -478,7 +478,7 @@ export function startAlbum() {
     try {
       album=validateAlbum(window.memoryAlbum.album);places=album.places;allPlaces=window.memoryAlbum.allPlaces;hiddenIds=new Set(window.memoryAlbum.hiddenIds);
       $('credits-open').hidden=window.memoryAlbum.credits.length===0;
-      document.title=typeof album.title==='string'?album.title:'地图相册';
+      document.title='昀的旅行地图';
       $('demo-badge').hidden=!album.demo;document.querySelector('.letter-demo').hidden=!album.demo;
       if(record(album.letter)) {if(typeof album.letter.message==='string')$('letter-message').textContent=album.letter.message;if(typeof album.letter.signature==='string')$('letter-signature').textContent=album.letter.signature;}
       renderStrip();

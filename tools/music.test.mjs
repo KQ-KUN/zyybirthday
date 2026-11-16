@@ -20,3 +20,11 @@ test('自动播放被拒绝后可以由用户重试；关闭音乐的设备刷�
   audio.denied=true;assert.equal(await player.play(),false);assert.equal(player.snapshot().status,'blocked');audio.denied=false;assert.equal(await player.play(),true);player.dispose();
   assert.throws(()=>createMusicController({audio,tracks:[{id:'bad',title:'bad',src:'https://bad/audio.mp3'}]}));
 });
+
+test('静音保持播放进度，切歌后仍静音，三个曲目按加减顺序循环',async()=>{
+  const three=[...tracks,{id:'three',title:'Three',src:'assets/music/three.mp3'}],audio=new AudioFixture(),saved=[];
+  const player=createMusicController({audio,tracks:three,savePreference:value=>saved.push(value)});await player.play();audio.currentTime=12;player.setMuted(true);
+  assert.equal(audio.paused,false);assert.equal(audio.currentTime,12);assert.equal(player.snapshot().muted,true);assert.equal(saved.at(-1).muted,true);
+  await player.next();assert.equal(player.snapshot().index,1);assert.equal(audio.muted,true);await player.next();assert.equal(player.snapshot().index,2);await player.next();assert.equal(player.snapshot().index,0);await player.previous();assert.equal(player.snapshot().index,2);
+  player.setMuted(false);assert.equal(audio.muted,false);player.dispose();
+});

@@ -1,4 +1,4 @@
-import {createLazyPhotos} from './lazy-photos.js?v=20261116-19';
+import {createLazyPhotos} from './lazy-photos.js?v=20261116-21';
 
 export function ribbonPhotos(places){return places.flatMap(place=>place.photos.map((photo,index)=>({...photo,place,index})));}
 
