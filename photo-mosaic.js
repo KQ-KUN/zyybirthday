@@ -1,6 +1,7 @@
-export function mosaicPhotos(places,limit=8){
+import {loadOpeningPhoto} from './opening-loader.js?v=20261116-22';
+export function mosaicPhotos(places,limit=8,hasPreview){
   limit=Math.max(1,Math.min(12,Math.trunc(limit)||8));
-  const photos=(places||[]).flatMap(place=>(place.photos||[]).map((photo,index)=>({...photo,place,index})));if(photos.length<=limit)return photos;
+  let photos=(places||[]).flatMap(place=>(place.photos||[]).map((photo,index)=>({...photo,place,index})));if(hasPreview){const ready=photos.filter(photo=>hasPreview(photo.thumbnail||photo));if(ready.length)photos=ready;}if(photos.length<=limit)return photos;
   if(limit===1)return [photos[0]];
   return Array.from({length:limit},(_,index)=>photos[Math.round(index*(photos.length-1)/(limit-1))]);
 }
@@ -22,9 +23,10 @@ export function createPhotoMosaic(canvas,{photos,loadPhoto,reduced=false,onOpenP
     glyph.save();glyph.translate(80+(index%2)*160,85+Math.floor(index/2)*168);glyph.rotate(index%2?.045:-.035);glyph.scale(scale,-scale);glyph.translate(-(left+right)/2,-(bottom+top)/2);const outline=new Path2D(letter.path);glyph.lineWidth=28;glyph.lineJoin='round';glyph.strokeStyle='#173d32';glyph.stroke(outline);glyph.fill(outline);glyph.restore();
   }
   const cells=mosaicCells(glyph.getImageData(0,0,width,height).data,width,height,step),tiles=[],releases=[];
-  let active=true,frame=0,progress=reduced?1:0;
+  const controller=new AbortController();let active=true,frame=0,progress=1,started=false;
   function draw(){
     if(!active)return;context.setTransform(ratio,0,0,ratio,0,0);context.clearRect(0,0,width,height);
+    if(!tiles.length){context.globalAlpha=.65;context.drawImage(mask,0,0);context.globalAlpha=1;canvas.dataset.progress='loading';return;}
     context.globalAlpha=.12;context.drawImage(mask,0,0);context.globalAlpha=1;
     const eased=1-(1-progress)**3;
     cells.forEach((cell,index)=>{
@@ -37,10 +39,12 @@ export function createPhotoMosaic(canvas,{photos,loadPhoto,reduced=false,onOpenP
   }
   for(const photo of photos){
     const source=photo.thumbnail||photo;releases.push(loadPhoto.retain(source));
-    loadPhoto(source,{isRelevant:()=>active}).then(async url=>{
+    loadOpeningPhoto(source,loadPhoto,{signal:controller.signal,isRelevant:()=>active}).then(async url=>{
       if(!active)return;const image=new Image();image.src=url;await image.decode();if(!active)return;
       const tile=document.createElement('canvas');tile.width=tile.height=40;const painter=tile.getContext('2d'),side=Math.min(image.naturalWidth,image.naturalHeight);
-      painter.drawImage(image,(image.naturalWidth-side)/2,(image.naturalHeight-side)/2,side,side,0,0,40,40);tiles.push({canvas:tile,photo});onPhotoReady(photo,url);canvas.dataset.photos=String(tiles.length);draw();
+      painter.drawImage(image,(image.naturalWidth-side)/2,(image.naturalHeight-side)/2,side,side,0,0,40,40);tiles.push({canvas:tile,photo});onPhotoReady(photo,url);canvas.dataset.photos=String(tiles.length);
+      if(!started){started=true;if(!reduced){progress=0;const began=performance.now();const tick=now=>{if(!active)return;progress=Math.min(1,(now-began)/1900);draw();if(progress<1)frame=requestAnimationFrame(tick);};frame=requestAnimationFrame(tick);}}
+      draw();
     }).catch(()=>{});
   }
   draw();
@@ -49,7 +53,6 @@ export function createPhotoMosaic(canvas,{photos,loadPhoto,reduced=false,onOpenP
     const index=cells.findIndex(cell=>{const left=cell.startX+(cell.x-cell.startX)*eased,top=cell.startY+(cell.y-cell.startY)*eased;return x>=left&&x<=left+step&&y>=top&&y<=top+step;});
     if(index>=0)onOpenPhoto(tiles[index%tiles.length].photo,photos,canvas);
   };canvas.addEventListener('click',open);
-  if(!reduced){const started=performance.now();const tick=now=>{progress=Math.min(1,(now-started)/1900);draw();if(progress<1)frame=requestAnimationFrame(tick);};frame=requestAnimationFrame(tick);}
-  return ()=>{active=false;cancelAnimationFrame(frame);canvas.removeEventListener('click',open);releases.forEach(release=>release());tiles.forEach(tile=>{tile.canvas.width=tile.canvas.height=1;});};
+  return ()=>{active=false;controller.abort();cancelAnimationFrame(frame);canvas.removeEventListener('click',open);releases.forEach(release=>release());tiles.forEach(tile=>{tile.canvas.width=tile.canvas.height=1;});};
 }
-import {birthdayLettering} from './birthday-lettering.js?v=20261116-21';
+import {birthdayLettering} from './birthday-lettering.js?v=20261116-22';

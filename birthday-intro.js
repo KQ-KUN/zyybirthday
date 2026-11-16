@@ -1,5 +1,5 @@
-import {mosaicPhotos,createPhotoMosaic} from './photo-mosaic.js?v=20261116-21';
-import {ribbonPhotos,createPhotoRibbon} from './photo-ribbon.js?v=20261116-21';
+import {mosaicPhotos,createPhotoMosaic} from './photo-mosaic.js?v=20261116-22';
+import {ribbonPhotos,createPhotoRibbon} from './photo-ribbon.js?v=20261116-22';
 const running=new WeakMap();
 
 export function birthdayLabel(value){
@@ -29,7 +29,7 @@ export function playBirthdayIntro(dialog,{album,loadPhoto,onFinish,onOpenPhoto=(
   const canvas=document.createElement('canvas');canvas.className='intro-mosaic';canvas.setAttribute('aria-label','照片拼成的生日快乐');canvas.setAttribute('role','img');
   const date=document.createElement('p');date.className='intro-date';date.textContent=birthdayLabel(album.celebration?.birthDate);date.hidden=!date.textContent;
   const wish=document.createElement('p');wish.className='intro-wish';wish.textContent='愿你自在，常有欢喜。';
-  const photos=mosaicPhotos(album.places);
+  const photos=mosaicPhotos(album.places,8,loadPhoto.hasOpeningPreview);
   const ribbon=createPhotoRibbon({photos:ribbonPhotos(album.places),loadPhoto,reduced,onOpenPhoto,trim:()=>window.memoryAlbum?.trimPhotos()});
   page.append(skip,heading,canvas,ribbon.element,date,wish);dialog.replaceChildren(page);
   const disposeMosaic=createPhotoMosaic(canvas,{photos,loadPhoto,reduced,onOpenPhoto});

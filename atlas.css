@@ -30,7 +30,6 @@ button:focus-visible,a:focus-visible{outline:3px solid #d49d65;outline-offset:4p
 .card-arrow{position:absolute;bottom:7px;right:2px;width:20px;height:20px;stroke:#f7f0df}
 .card-close{position:absolute;top:13px;right:13px;width:44px;height:44px;background:#fffdf2f0;color:var(--forest);border:1px solid #ffffff8c;border-radius:50%;display:grid;place-items:center;font-size:25px;z-index:4;box-shadow:0 2px 10px #173d3214}
 .place-card[aria-busy="true"] .place-card-open{opacity:.75;cursor:progress}
-.place-card[aria-busy="true"]::after{content:"";position:absolute;left:5px;right:5px;top:5px;height:2px;background:#ddae7d;z-index:4}
 .album-dock{position:relative;inset:auto;width:100%;padding:0;margin-top:auto;border:0;border-top:1px solid #cad7bf33;border-radius:0;box-shadow:none;background:transparent;backdrop-filter:none;flex:none;padding-top:18px}
 .dock-heading{font:12px/1.5 var(--sans);letter-spacing:.06em;color:#c2cfb6;margin-bottom:12px;display:flex;justify-content:space-between}
 .tour-progress{color:#efd4aa}
@@ -328,7 +327,7 @@ button:focus-visible,a:focus-visible{outline-color:var(--forest)}.album-sidebar 
 .music-trigger:focus-visible{outline:3px solid var(--rust);outline-offset:3px}
 .music-player[data-playing="true"][data-muted="false"]>.music-trigger{background:#e7b86b;border-color:#d4a458}
 .music-player[data-status="error"]>.music-trigger{border-color:var(--rust);color:var(--rust)}
-.music-panel{position:absolute;z-index:20;right:0;top:calc(100% + 8px);display:flex;gap:8px;width:174px;padding:12px;border:1px solid #c9d3bd;border-radius:28px;background:#fffdf3f5;box-shadow:0 8px 28px #173d3224}
+.music-panel{position:absolute;z-index:20;right:0;top:calc(100% + 8px);display:flex;gap:8px;width:122px;padding:12px;border:1px solid #c9d3bd;border-radius:28px;background:#fffdf3f5;box-shadow:0 8px 28px #173d3224}
 .music-player:not([open])>.music-panel{display:none}
 .music-panel button{width:44px;height:44px;flex:none;display:grid;place-items:center;padding:0;border:1px solid #bac8ae;border-radius:50%;background:#eaf0e1;color:#173d32}
 .music-panel .music-mute{background:#173d32;border-color:#173d32;color:#fff8e8}.music-panel svg{width:22px;height:22px}

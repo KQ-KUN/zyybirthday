@@ -1,9 +1,9 @@
-import {downloadBytes} from './network.js?v=20261116-21';
-import {openPhoto} from './crypto.js?v=20261116-21';
+import {downloadBytes} from './network.js?v=20261116-22';
+import {openPhoto} from './crypto.js?v=20261116-22';
 
 export function photoRoutes(photo){
   if(!/^sealed\/[a-f0-9-]{36}\.bin$/.test(photo.src)||!photo.src.endsWith('/'+photo.id+'.bin'))throw new Error('照片路径无效');
-  return [photo.src,'https://cdn.jsdelivr.net/gh/KQ-KUN/mothers-memory-map-site@main/'+photo.src,'https://raw.githubusercontent.com/KQ-KUN/mothers-memory-map-site/main/'+photo.src];
+  return [photo.src,'https://cdn.jsdelivr.net/gh/KQ-KUN/zyybirthday@main/'+photo.src,'https://raw.githubusercontent.com/KQ-KUN/zyybirthday/main/'+photo.src];
 }
 export function firstVerifiedPhoto(routes,verify,{download=downloadBytes,delays=[0,1400,3200]}={}){
   return new Promise((resolve,reject)=>{
@@ -19,12 +19,14 @@ export function firstVerifiedPhoto(routes,verify,{download=downloadBytes,delays=
     });
   });
 }
-export function createPhotoRepository({key,store,localStore,download,delays}){
+export function createPhotoRepository({key,store,localStore,download,delays,openingPhotos={}}){
   let foreground=0,stopped=false;
+  const embedded=new Map(Object.entries(openingPhotos).filter(([id,value])=>/^[a-f0-9-]{36}$/.test(id)&&typeof value==='string'&&value.length<100000));
   async function verify(bytes,id){const plaintext=await openPhoto(new Uint8Array(bytes),key,id);if(plaintext[0]!==255||plaintext[1]!==216){plaintext.fill(0);throw new Error('照片内容无效');}return plaintext;}
   async function read(photo){
     photoRoutes(photo);
     if(photo.local)return verify(await localStore.readPhoto(photo),photo.id);
+    if(embedded.has(photo.id))try{return await verify(Uint8Array.from(atob(embedded.get(photo.id)),value=>value.charCodeAt(0)),photo.id);}catch{embedded.delete(photo.id);}
     let cached;try{cached=await store.getPhoto(photo.id);}catch{}
     if(cached)try{return await verify(cached,photo.id);}catch{try{await store.deletePhoto(photo.id);}catch{}}
     foreground++;
@@ -35,6 +37,7 @@ export function createPhotoRepository({key,store,localStore,download,delays}){
     }finally{foreground--;}
   }
   return {
+    hasOpeningPreview:photo=>photo.local||embedded.has(photo.id),
     read,
     async load(photo){const plaintext=await read(photo);const size=plaintext.byteLength;try{return {url:URL.createObjectURL(new Blob([plaintext],{type:'image/jpeg'})),bytes:size};}finally{plaintext.fill(0);}},
     async warmThumbnails(places){

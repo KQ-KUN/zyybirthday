@@ -16,6 +16,12 @@ test('下载成功但认证失败的线路不会被接受，备用线路仍能�
   assert.deepEqual(result.plaintext,new Uint8Array([255,216]));
   await assert.rejects(firstVerifiedPhoto(['bad'],async()=>{throw new Error('invalid');},{delays:[0],download:async()=>new Uint8Array()}));
 });
+
+test('开场预览内嵌密文在全部图片线路断开时仍可直接解密，不依赖存储或下载',async()=>{
+  const key=await crypto.subtle.generateKey({name:'AES-GCM',length:256},false,['encrypt','decrypt']),sealed=await sealPhoto(jpeg,key,id);let downloads=0;
+  const repository=createPhotoRepository({key,openingPhotos:{[id]:Buffer.from(sealed).toString('base64')},store:{getPhoto:async()=>{throw new Error('storage disabled');}},download:async()=>{downloads++;throw new Error('all routes offline');}});
+  assert.equal(repository.hasOpeningPreview(photo),true);assert.deepEqual(await repository.read(photo),jpeg);assert.equal(downloads,0);repository.stop();
+});
 test('记住的密钥可结构化克隆并重新解锁，不能导出原始密钥',async()=>{
   const payload={version:2,album:{places:[]}};const envelope=await encryptAlbum(payload,'fixture','0101');const key=await deriveKey('fixture','0101',new Uint8Array(Buffer.from(envelope.salt,'base64')),['encrypt','decrypt']);
   const stored=structuredClone(key);assert.equal(stored.extractable,false);await assert.rejects(crypto.subtle.exportKey('raw',stored));assert.deepEqual(await decryptAlbumWithKey(envelope,stored),payload);

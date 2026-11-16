@@ -1,10 +1,10 @@
-import {createMusicController} from './music-controller.js?v=20261116-21';
+import {createMusicController} from './music-controller.js?v=20261116-22';
 const speaker='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4ZM17 8a6 6 0 0 1 0 8M20 5a10 10 0 0 1 0 14"/></svg>';
 const silent='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4ZM17 9l5 6m0-6-5 6"/></svg>';
 export function mountMusicPlayer({tracks,root}){
   const audio=document.createElement('audio');audio.id='album-music';audio.setAttribute('playsinline','');audio.hidden=true;document.body.append(audio);
   const element=document.createElement('details');element.className='music-player';element.setAttribute('aria-label','音乐控制');
-  element.innerHTML=`<summary class="round-button music-trigger" aria-label="打开音乐控制">${speaker}</summary><div class="music-panel"><button type="button" class="music-mute" aria-label="开启音乐">${silent}</button><button type="button" class="music-prev" aria-label="上一首"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg></button><button type="button" class="music-next" aria-label="下一首"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg></button><span class="music-status sr-only" role="status"></span></div>`;
+  element.innerHTML=`<summary class="round-button music-trigger" aria-label="打开音乐控制">${speaker}</summary><div class="music-panel"><button type="button" class="music-mute" aria-label="开启音乐">${silent}</button><button type="button" class="music-next" aria-label="下一首"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 5 10 7-10 7ZM19 5v14"/></svg></button><span class="music-status sr-only" role="status"></span></div>`;
   const find=selector=>element.querySelector(selector),trigger=find('summary'),mute=find('.music-mute'),status=find('.music-status');
   let preference={};try{const saved=JSON.parse(localStorage.getItem('memory-album-music')||'{}');if(saved&&typeof saved==='object')preference=saved;}catch{}
   let lastQuiet;
@@ -16,7 +16,7 @@ export function mountMusicPlayer({tracks,root}){
   }
   const controller=createMusicController({audio,tracks,preference,onChange:paint,savePreference:value=>localStorage.setItem('memory-album-music',JSON.stringify(value))});paint(controller.snapshot());
   mute.addEventListener('click',()=>{const state=controller.snapshot();if(!state.playing){controller.setMuted(false);controller.play();}else controller.setMuted(!state.muted);});
-  find('.music-prev').addEventListener('click',()=>controller.previous());find('.music-next').addEventListener('click',()=>controller.next());
+  find('.music-next').addEventListener('click',()=>controller.next());
   function gesture(event){if(event.isTrusted&&!element.contains(event.target)){element.open=false;controller.startFromGesture();}}
   document.addEventListener('pointerdown',gesture,true);document.addEventListener('keydown',gesture,true);
   element.addEventListener('keydown',event=>{if(event.key==='Escape'&&element.open){event.preventDefault();event.stopPropagation();element.open=false;trigger.focus();}});

@@ -1,9 +1,9 @@
-import {createDeviceStore} from './device-store.js?v=20261116-21';
-import {createPhotoRepository} from './photo-repository.js?v=20261116-21';
-import {createPhotoCache} from './photo-cache.js?v=20261116-21';
-import {openAlbum,deriveKey,decryptAlbumWithKey,normalizeName,normalizeBirthday} from './crypto.js?v=20261116-21';
-import {startAlbum} from './app.js?v=20261116-21';
-import {createLocalAlbum,mergeLocalPlaces} from './local-album.js?v=20261116-21';
+import {createDeviceStore} from './device-store.js?v=20261116-22';
+import {createPhotoRepository} from './photo-repository.js?v=20261116-22';
+import {createPhotoCache} from './photo-cache.js?v=20261116-22';
+import {openAlbum,deriveKey,decryptAlbumWithKey,normalizeName,normalizeBirthday} from './crypto.js?v=20261116-22';
+import {startAlbum} from './app.js?v=20261116-22';
+import {createLocalAlbum,mergeLocalPlaces} from './local-album.js?v=20261116-22';
 
 const form=document.getElementById('unlock-form');
 const error=document.getElementById('unlock-error');
@@ -20,11 +20,13 @@ async function hydrate(payload,key) {
   const localStore=createLocalAlbum({key,namespace:envelope.salt});let additions=[],hiddenIds=[],localWarning='';
   try{additions=await localStore.load();hiddenIds=await localStore.hiddenIds();}catch{localWarning='本机照片暂时无法读取，原有照片仍可浏览。请在同一浏览器中恢复备份。';}
   const basePlaces=JSON.parse(JSON.stringify(payload.album.places));
-  const repository=createPhotoRepository({key,store:deviceStore,localStore});
+  let openingPhotos={};try{const opening=JSON.parse(document.getElementById('opening-photos')?.textContent||'{}');if(opening.version===1&&opening.namespace===envelope.salt&&opening.photos&&typeof opening.photos==='object')openingPhotos=opening.photos;}catch{}
+  const repository=createPhotoRepository({key,store:deviceStore,localStore,openingPhotos});
   const cache=createPhotoCache({dispose:url=>URL.revokeObjectURL(url),isVisible:url=>[...document.images].some(img=>img.isConnected&&img.src===url),load:photo=>repository.load(photo)});
   const loadPhoto=(photo,options)=>cache.get(photo,options);
   loadPhoto.retain=photo=>cache.retain(photo.id);
   loadPhoto.invalidate=photo=>cache.invalidate(photo.id);
+  loadPhoto.hasOpeningPreview=photo=>repository.hasOpeningPreview(photo);
   const allPlaces=mergeLocalPlaces(basePlaces,additions);
   window.memoryAlbum={album:{...payload.album,places:allPlaces.filter(place=>!hiddenIds.includes(place.id))},allPlaces,hiddenIds,basePlaces,localStore,localWarning,forgetDevice:()=>deviceStore.forget(envelope.salt),credits:payload.credits,loadPhoto,trimPhotos:cache.trim};
   window.addEventListener('pagehide',()=>{repository.stop();cache.clear();delete window.memoryAlbum;},{once:true});
@@ -38,7 +40,7 @@ async function enter(payload,key){
   try{startAlbum();}
   catch(error){document.getElementById('unlock-screen').hidden=false;document.getElementById('app').hidden=true;document.body.classList.remove('album-unlocked');disposePhotos();delete window.memoryAlbum;throw error;}
   document.body.dataset.unlockMode='device';
-  if('serviceWorker' in navigator)setTimeout(()=>navigator.serviceWorker.register('service-worker.js?v=20261116-21').then(()=>navigator.serviceWorker.ready).then(()=>{document.body.dataset.offlineShell='ready';}).catch(()=>{}),2500);
+  if('serviceWorker' in navigator)setTimeout(()=>navigator.serviceWorker.register('service-worker.js?v=20261116-22').then(()=>navigator.serviceWorker.ready).then(()=>{document.body.dataset.offlineShell='ready';}).catch(()=>{}),2500);
 }
 form.addEventListener('submit',async(event)=>{
   event.preventDefault();if(busy)return;error.textContent='';
