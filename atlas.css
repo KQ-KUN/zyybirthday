@@ -304,8 +304,12 @@ button:focus-visible,a:focus-visible{outline-color:var(--forest)}.album-sidebar 
 
 .map-marker .pin-label,.paper-pin .pin-label{max-width:132px}
 
-.auto-browse{display:block;width:100%;min-height:40px;margin-top:7px;border:1px solid #e4eadb45;border-radius:22px;background:#f7f0df0b;color:inherit;font:13px var(--sans)}
-.auto-browse[aria-pressed="true"]{background:#f7f0df;color:var(--forest)}
+.dock-actions{display:grid;grid-template-columns:1fr 1.15fr 1fr;gap:8px}
+.dock-actions>button{min-width:0;min-height:44px;padding:8px 6px;white-space:nowrap;font:500 12px var(--sans);border-radius:24px;justify-content:center}
+.dock-actions>button svg{display:none}
+.dock-actions .auto-browse{margin:0;width:auto;border:1px solid #e7b86b;background:#e7b86b;color:#173d32;box-shadow:0 2px 8px #102c2526;font-weight:700;transition:background .16s ease,color .16s ease}
+.dock-actions .auto-browse[aria-pressed="true"]{background:#fff7e5;border-color:#fff7e5;color:#173d32}
+.photo-incoming{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:1}
 .photo-item{position:relative}.photo-item::before{content:'';position:absolute;inset:0 0 auto;aspect-ratio:4/3;background:#e3e6dc;border-radius:9px;pointer-events:none}.photo-item img,.photo-item>span{position:relative}
 .photo-item[data-image-state="loading"]::after,.photo-item[data-image-state="error"]::after{position:absolute;top:30px;left:0;right:0;text-align:center;font:12px var(--sans);color:#61705e;pointer-events:none}.photo-item[data-image-state="loading"]::after{content:'正在加载…'}.photo-item[data-image-state="error"]::after{content:'轻点重试'}
 .grid-retry{display:block;margin:12px 20px 0;padding:9px 14px;min-height:44px;border:1px solid var(--line);border-radius:22px;background:none;color:var(--forest);font:13px var(--sans)}

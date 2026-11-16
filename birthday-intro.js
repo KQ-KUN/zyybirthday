@@ -1,4 +1,5 @@
-import {mosaicPhotos,createPhotoMosaic} from './photo-mosaic.js?v=20261116-16';
+import {mosaicPhotos,createPhotoMosaic} from './photo-mosaic.js?v=20261116-17';
+import {ribbonPhotos,createPhotoRibbon} from './photo-ribbon.js?v=20261116-17';
 const running=new WeakMap();
 
 export function birthdayLabel(value){
@@ -28,13 +29,12 @@ export function playBirthdayIntro(dialog,{album,loadPhoto,onFinish,onOpenPhoto=(
   const canvas=document.createElement('canvas');canvas.className='intro-mosaic';canvas.setAttribute('aria-label','照片拼成的生日快乐');canvas.setAttribute('role','img');
   const date=document.createElement('p');date.className='intro-date';date.textContent=birthdayLabel(album.celebration?.birthDate);date.hidden=!date.textContent;
   const wish=document.createElement('p');wish.className='intro-wish';wish.textContent='愿你自在，常有欢喜。';
-  const links=document.createElement('div');links.className='intro-photo-links';links.setAttribute('aria-label','打开拼字中的照片');
-  const photos=mosaicPhotos(album.places),buttons=new Map();
-  for(const [index,photo] of photos.entries()){const button=document.createElement('button');button.type='button';button.setAttribute('aria-label',`打开拼字照片 ${index+1}：${photo.alt}`);button.textContent=String(index+1);button.addEventListener('click',()=>onOpenPhoto(photo,photos,button));buttons.set(photo.id,button);links.append(button);}
-  page.append(skip,heading,canvas,links,date,wish);dialog.replaceChildren(page);
-  const disposeMosaic=createPhotoMosaic(canvas,{photos,loadPhoto,reduced,onOpenPhoto,onPhotoReady:(photo,url)=>{const img=document.createElement('img');img.src=url;img.alt='';buttons.get(photo.id)?.replaceChildren(img);}});
+  const photos=mosaicPhotos(album.places);
+  const ribbon=createPhotoRibbon({photos:ribbonPhotos(album.places),loadPhoto,reduced,onOpenPhoto,trim:()=>window.memoryAlbum?.trimPhotos()});
+  page.append(skip,heading,canvas,ribbon.element,date,wish);dialog.replaceChildren(page);
+  const disposeMosaic=createPhotoMosaic(canvas,{photos,loadPhoto,reduced,onOpenPhoto});
   const timeline=createIntroTimeline({reduced,onFinish,onReveal:()=>{dialog.dataset.phase='photos';},onConverge:()=>{dialog.dataset.phase='held';}});
-  const dispose=()=>{timeline.dispose();disposeMosaic();links.querySelectorAll('img').forEach(img=>img.removeAttribute('src'));dialog.dataset.state='finished';dialog.removeEventListener('close',closed);skip.removeEventListener('click',timeline.finish);running.delete(dialog);onDispose();};
+  const dispose=()=>{timeline.dispose();disposeMosaic();ribbon.dispose();dialog.dataset.state='finished';dialog.removeEventListener('close',closed);skip.removeEventListener('click',timeline.finish);running.delete(dialog);onDispose();};
   const closed=()=>{if(!dialog.open)dispose();};
   skip.addEventListener('click',timeline.finish);dialog.addEventListener('close',closed);running.set(dialog,dispose);skip.focus();
   return {finish:timeline.finish,dispose};

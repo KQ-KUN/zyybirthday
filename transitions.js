@@ -40,18 +40,32 @@ export function crossfade(element,update,{duration=280,reduced=false,contain=fal
 }
 
 export function createImageSwap(image,{reduced=false,contain=false}={}) {
-  let revision=0,currentRelease=null,pendingResolve=null;
+  let revision=0,currentRelease=null,pendingResolve=null,layers=[];
+  function freeze(){for(const layer of layers){layer.node.style.opacity=getComputedStyle(layer.node).opacity;layer.animation.cancel();}}
+  function clearLayers(){for(const layer of layers){layer.animation.cancel();layer.node.remove();layer.release?.();}layers=[];}
+  image.style.opacity='1';image.style.transition='none';
   return {
-    cancel(){revision++;pendingResolve?.(false);pendingResolve=null;image.removeAttribute('src');currentRelease?.();currentRelease=null;},
+    cancel(){revision++;pendingResolve?.(false);pendingResolve=null;clearLayers();image.removeAttribute('src');currentRelease?.();currentRelease=null;},
     show(photo,load,onCommit=()=>{},onError=()=>{}){
-      const ticket=++revision;pendingResolve?.(false);let shown=false;
+      const ticket=++revision;freeze();pendingResolve?.(false);let shown=false;
       const first=new Promise(resolve=>{pendingResolve=resolve;});
       async function stage(source,quality){
-        const release=load.retain?.(source)||(()=>{});let kept=false;
+        const release=load.retain?.(source)||(()=>{});let kept=false,layer;
         try{
           const url=await load(source,{isRelevant:()=>ticket===revision});const ready=new Image();ready.src=url;await ready.decode();if(ticket!==revision)return false;
-          if(image.getAttribute('src')!==url)crossfade(image,()=>{image.src=url;image.alt=photo.alt||'';image.dataset.quality=quality;},{reduced,contain});
-          const previous=currentRelease;currentRelease=release;kept=true;previous?.();shown=true;onCommit(quality);pendingResolve?.(true);pendingResolve=null;return true;
+          // 旧图始终不透明；新图盖在其上淡入，避免双向淡出时露出底色。
+          // 同一张照片的高清升级直接替换，不再触发第二次过渡。
+          if(!shown&&image.getAttribute('src')&&image.getAttribute('src')!==url){
+            const node=image.cloneNode(false);node.removeAttribute('id');node.hidden=false;node.alt='';node.src=url;node.setAttribute('aria-hidden','true');node.className='photo-incoming';
+            node.style.cssText=`position:absolute;inset:0;width:100%;height:100%;margin:0;pointer-events:none;object-fit:${contain?'contain':getComputedStyle(image).objectFit};opacity:0;z-index:1;`;
+            image.parentElement.append(node);
+            const animation=node.animate([{opacity:0},{opacity:1}],{duration:reduced?160:480,easing:'linear',fill:'forwards'});
+            layer={node,animation,release};layers.push(layer);kept=true;
+            try{await animation.finished;}catch{return false;}
+            if(ticket!==revision)return false;
+          }
+          image.src=url;image.alt=photo.alt||'';image.dataset.quality=quality;image.hidden=false;
+          const previous=currentRelease;currentRelease=release;kept=true;if(layer)layer.release=null;clearLayers();previous?.();shown=true;onCommit(quality);pendingResolve?.(true);pendingResolve=null;return true;
         }finally{if(!kept)release();}
       }
       (async()=>{
