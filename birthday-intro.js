@@ -1,4 +1,4 @@
-import {mosaicPhotos,createPhotoMosaic} from './photo-mosaic.js?v=20261116-14';
+import {mosaicPhotos,createPhotoMosaic} from './photo-mosaic.js?v=20261116-15';
 const running=new WeakMap();
 
 export function birthdayLabel(value){
@@ -15,7 +15,6 @@ export function createIntroTimeline({onFinish,onReveal=()=>{},onConverge=()=>{},
   const finish=()=>{if(stop())onFinish();};
   timers.push(setTimer(()=>{if(active)onReveal();},reduced?1600:2400));
   if(!reduced)timers.push(setTimer(()=>{if(active)onConverge();},5400));
-  timers.push(setTimer(finish,reduced?5200:7400));
   return {finish,dispose:stop,get active(){return active;}};
 }
 
@@ -24,14 +23,14 @@ export function playBirthdayIntro(dialog,{album,loadPhoto,onFinish,onDispose=()=
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
   dialog.dataset.reduced=String(reduced);dialog.dataset.state='playing';dialog.dataset.phase='opening';
   const page=document.createElement('div');page.className='intro-page';
-  const skip=document.createElement('button');skip.className='intro-skip';skip.textContent='跳过';skip.setAttribute('aria-label','跳过生日动画，进入相册');
+  const skip=document.createElement('button');skip.className='intro-skip';skip.textContent='×';skip.setAttribute('aria-label','关闭生日祝福，进入相册');
   const heading=document.createElement('h2');heading.id='intro-title';heading.className='sr-only';heading.textContent='生日快乐';
   const canvas=document.createElement('canvas');canvas.className='intro-mosaic';canvas.setAttribute('aria-label','照片拼成的生日快乐');canvas.setAttribute('role','img');
   const date=document.createElement('p');date.className='intro-date';date.textContent=birthdayLabel(album.celebration?.birthDate);date.hidden=!date.textContent;
   const wish=document.createElement('p');wish.className='intro-wish';wish.textContent='愿你自在，常有欢喜。';
   page.append(skip,heading,canvas,date,wish);dialog.replaceChildren(page);
   const disposeMosaic=createPhotoMosaic(canvas,{photos:mosaicPhotos(album.places),loadPhoto,reduced});
-  const timeline=createIntroTimeline({reduced,onFinish,onReveal:()=>{dialog.dataset.phase='photos';},onConverge:()=>{dialog.dataset.phase='gathering';}});
+  const timeline=createIntroTimeline({reduced,onFinish,onReveal:()=>{dialog.dataset.phase='photos';},onConverge:()=>{dialog.dataset.phase='held';}});
   const dispose=()=>{timeline.dispose();disposeMosaic();dialog.dataset.state='finished';dialog.removeEventListener('close',closed);skip.removeEventListener('click',timeline.finish);running.delete(dialog);onDispose();};
   const closed=()=>{if(!dialog.open)dispose();};
   skip.addEventListener('click',timeline.finish);dialog.addEventListener('close',closed);running.set(dialog,dispose);skip.focus();

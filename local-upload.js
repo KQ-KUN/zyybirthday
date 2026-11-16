@@ -1,8 +1,9 @@
-export function uploadLocations(places,regions,divisions){
+import {cityLocations} from './location-index.js?v=20261116-15';
+export function uploadLocations(places,regions){
   return [
     ...places.map(place=>({id:place.id,name:place.name,region:place.region,coordinates:place.coordinates,targetId:place.id,group:'已有地点'})),
     ...regions.map((region,index)=>({id:'province-'+index,name:region.shortName||region.name,region:region.shortName||region.name,coordinates:region.coordinates,group:'省份'})),
-    ...divisions.map((region,index)=>({id:'area-'+index,name:region.name,region:region.name,coordinates:region.coordinates,group:'城市与区县'}))
+    ...cityLocations
   ];
 }
 async function prepareImage(file,name){
@@ -23,19 +24,47 @@ async function prepareImage(file,name){
     return {photo:{...entry(full),alt:name,thumbnail:entry(thumb)},images:[full,thumb]};
   }finally{image.removeAttribute('src');URL.revokeObjectURL(url);}
 }
-export function bindLocalUpload({store,getLocations,onSaved}){
-  const $=id=>document.getElementById(id),form=$('upload-form'),status=$('upload-status');let busy=false,locations=[];
-  function controls(disabled){busy=disabled;form.querySelectorAll('input,select,button').forEach(element=>element.disabled=disabled);$('backup-export').disabled=disabled;$('backup-import').disabled=disabled;form.setAttribute('aria-busy',String(disabled));}
+export function searchLocations(locations,query){
+  const normalize=value=>value.normalize('NFKC').toLowerCase().replace(/特别行政区|维吾尔自治区|壮族自治区|回族自治区|自治区|自治州|地区|省|市|[\s·-]/gu,'');
+  const q=normalize(query.trim());if(!q)return [];
+  return locations.map((item,index)=>{const name=normalize(item.name),region=normalize(item.region);return {item,index,score:name===q?0:name.startsWith(q)?1:name.includes(q)?2:q.length>=3&&region.includes(q)?3:99};}).filter(entry=>entry.score<99).sort((a,b)=>a.score-b.score||a.index-b.index).slice(0,10).map(entry=>entry.item);
+}
+export function bindLocalUpload({store,getLocations,getHiddenPlaces=()=>[],onSaved,onRestore=async()=>{}}){
+  const $=id=>document.getElementById(id),form=$('upload-form'),status=$('upload-status'),search=$('upload-location'),results=$('location-results');
+  let busy=false,locations=[],selected=null,matches=[],active=-1;
+  function controls(disabled){busy=disabled;form.querySelectorAll('input,button').forEach(element=>element.disabled=disabled);$('backup-export').disabled=disabled;$('backup-import').disabled=disabled;form.setAttribute('aria-busy',String(disabled));}
   function errorMessage(error){return error?.name==='QuotaExceededError'?'手机空间不足，照片尚未保存。请先导出备份。':error.message||'保存失败，请重试';}
+  function hideResults(){results.hidden=true;search.setAttribute('aria-expanded','false');search.removeAttribute('aria-activedescendant');active=-1;}
+  function pick(item){selected=item;search.value=item.region.includes(item.name)?item.region:item.region+' · '+item.name;search.focus();hideResults();}
+  function showResults(){
+    matches=searchLocations(locations,search.value);results.replaceChildren();active=-1;
+    if(!search.value.trim()){hideResults();return;}
+    for(const [index,item] of matches.entries()){
+      const button=document.createElement('button');button.type='button';button.id='location-result-'+index;button.setAttribute('role','option');button.setAttribute('aria-selected','false');
+      const name=document.createElement('strong');name.textContent=item.name;const region=document.createElement('span');region.textContent=item.region;button.append(name,region);
+      // 保持输入框焦点，避免触摸结果时先失焦收起列表，导致点击丢失。
+      button.addEventListener('pointerdown',event=>event.preventDefault());button.addEventListener('mousedown',event=>event.preventDefault());button.addEventListener('click',()=>pick(item));results.append(button);
+    }
+    if(!matches.length){const empty=document.createElement('p');empty.textContent='未找到地点，可尝试所在城市或省份';results.append(empty);}
+    results.hidden=false;search.setAttribute('aria-expanded','true');
+  }
+  search.addEventListener('input',()=>{selected=null;showResults();});search.addEventListener('focus',showResults);
+  search.addEventListener('keydown',event=>{
+    if(event.isComposing)return;
+    if(event.key==='Escape'){event.preventDefault();event.stopPropagation();hideResults();return;}
+    if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();if(results.hidden)showResults();if(!matches.length)return;active=(active+(event.key==='ArrowDown'?1:-1)+matches.length)%matches.length;[...results.children].forEach((element,index)=>element.setAttribute('aria-selected',String(index===active)));search.setAttribute('aria-activedescendant','location-result-'+active);results.children[active].scrollIntoView({block:'nearest'});}
+    if(event.key==='Enter'&&!results.hidden){event.preventDefault();if(active>=0)pick(matches[active]);else if(matches.length===1)pick(matches[0]);}
+  });
+  search.parentElement.addEventListener('focusout',()=>queueMicrotask(()=>{if(!search.parentElement.contains(document.activeElement))hideResults();}));
   function refresh(){
-    locations=getLocations();const selected=$('upload-location').value;$('upload-location').replaceChildren();
-    for(const name of ['已有地点','省份','城市与区县']){const group=document.createElement('optgroup');group.label=name;for(const item of locations.filter(item=>item.group===name)){const option=document.createElement('option');option.value=item.id;option.textContent=item.group==='已有地点'?`${item.region} · ${item.name}`:item.name;group.append(option);}$('upload-location').append(group);}
-    if(locations.some(item=>item.id===selected))$('upload-location').value=selected;
+    locations=getLocations();if(selected&&!locations.some(item=>item.id===selected.id)){selected=null;search.value='';}
+    const hidden=getHiddenPlaces();$('removed-pins').hidden=!hidden.length;$('removed-pins-summary').textContent=`已移除的地点（${hidden.length}）`;$('removed-pins-list').replaceChildren();
+    for(const place of hidden){const row=document.createElement('div'),name=document.createElement('span'),button=document.createElement('button');name.textContent=place.name;button.type='button';button.textContent='恢复';button.setAttribute('aria-label','恢复'+place.name+'的地图钉');button.addEventListener('click',async()=>{if(busy)return;controls(true);try{await onRestore(place.id);refresh();status.textContent='地图钉已恢复';}catch(error){status.textContent=errorMessage(error);}finally{controls(false);}});row.append(name,button);$('removed-pins-list').append(row);}
   }
   refresh();
   form.addEventListener('submit',async event=>{
     event.preventDefault();if(busy)return;status.textContent='';
-    const files=[...$('upload-photos').files],name=$('upload-name').value.trim(),location=locations.find(item=>item.id===$('upload-location').value);
+    const files=[...$('upload-photos').files],name=$('upload-name').value.trim(),location=selected;
     if(!files.length||files.length>20){status.textContent='每次请选择 1–20 张照片';return;}
     if(!name||name.length>100||!location){status.textContent='请填写地点名称，并选择所在地区';return;}
     controls(true);const images=[];
@@ -46,7 +75,7 @@ export function bindLocalUpload({store,getLocations,onSaved}){
       const place={id:'local-'+crypto.randomUUID(),name,region:location.region,coordinates:[...location.coordinates],...(targetId?{targetId}:{}),photos};
       status.textContent='正在保存到本机…';const additions=await store.add(place,images);
       navigator.storage?.persist?.().catch(()=>{});
-      $('upload-photos').value='';status.textContent=`已保存 ${photos.length} 张照片，请导出备份`;onSaved(additions,targetId||place.id);refresh();
+      $('upload-photos').value='';status.textContent=`已保存 ${photos.length} 张照片，请导出备份`;await onSaved(additions,targetId||place.id);refresh();
     }catch(error){status.textContent=errorMessage(error);}
     finally{images.forEach(image=>image.bytes.fill(0));controls(false);}
   });
@@ -58,7 +87,7 @@ export function bindLocalUpload({store,getLocations,onSaved}){
   $('backup-import').addEventListener('click',()=>{if(!busy)$('backup-file').click();});
   $('backup-file').addEventListener('change',async()=>{
     const file=$('backup-file').files[0];if(!file||busy)return;controls(true);status.textContent='正在校验并恢复备份…';
-    try{const additions=await store.importBackup(file);onSaved(additions);refresh();status.textContent='备份已合并，原有照片已保留';}
+    try{const additions=await store.importBackup(file);await onSaved(additions);refresh();status.textContent='备份已合并，原有照片已保留';}
     catch(error){status.textContent=errorMessage(error);}finally{$('backup-file').value='';controls(false);}
   });
   return {refresh};

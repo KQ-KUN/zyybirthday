@@ -11,10 +11,11 @@ test('两百张照片只选择八张拼字，空相册和单张照片也可用',
   const photos=Array.from({length:220},(_,id)=>({id}));
   assert.equal(mosaicPhotos([{photos}]).length,8);assert.deepEqual(mosaicPhotos([{photos}],1),[photos[0]]);assert.deepEqual(mosaicPhotos([]),[]);
 });
-test('跳过、自动结束和返回取消互不重复，减少动态效果不移动照片',()=>{
+test('生日开场只在主动关闭后退出，所有计时回调执行后仍然停留',()=>{
   let jobs=[],finished=0,converged=0;
   const options={onFinish:()=>finished++,onConverge:()=>converged++,setTimer:(fn,delay)=>{const job={fn,delay};jobs.push(job);return job;},clearTimer:job=>{jobs=jobs.filter(item=>item!==job);}};
-  let intro=createIntroTimeline(options);const late=jobs.map(job=>job.fn);intro.finish();intro.finish();late.forEach(fn=>fn());assert.equal(finished,1);assert.equal(converged,0);assert.equal(jobs.length,0);
+  let intro=createIntroTimeline(options);const pending=[...jobs];jobs=[];pending.forEach(job=>job.fn());assert.equal(finished,0);assert.equal(converged,1);assert.equal(intro.active,true);
+  intro.finish();intro.finish();assert.equal(finished,1);
   intro=createIntroTimeline(options);intro.dispose();assert.equal(jobs.length,0);assert.equal(finished,1);
-  intro=createIntroTimeline({...options,reduced:true});assert.equal(jobs.length,2);assert(jobs.at(-1).delay<6000);jobs.at(-1).fn();assert.equal(finished,2);assert.equal(converged,0);
+  intro=createIntroTimeline({...options,reduced:true});assert.equal(jobs.length,1);jobs[0].fn();assert.equal(finished,1);intro.finish();assert.equal(finished,2);
 });

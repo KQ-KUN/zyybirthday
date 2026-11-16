@@ -5,3 +5,7 @@
 - 浏览时无需访问上述服务，使用随网站提供的 `geography.js`。地图用于回忆地点展示，不用于导航或精确测量。
 
 市、区县边界与标签来自 DataV.GeoAtlas：浙江、江苏、广东、新疆的市级边界，以及照片涉及的 17 个市州的区县边界。原始入口为 https://geo.datav.aliyun.com/areas_v3/bound/{adcode}_full.json ，本地简化后随站点提供（2026-11-15）。
+
+地点搜索使用 DataV.GeoAtlas 的全国城市中心点（https://geo.datav.aliyun.com/areas_v3/bound/100000_full_city.json），合并既有区县位置，生成 `location-index.js`，浏览时不请求远程搜索服务。
+
+生日艺术字轮廓来自 ZCOOL KuaiLe，https://github.com/google/fonts/tree/main/ofl/zcoolkuaile ，四个字轮廓随站点提供；原版权声明与 SIL Open Font License 1.1 见 `birthday-lettering-license.txt`。

@@ -1,4 +1,4 @@
-import {sealPhoto,openPhoto} from './crypto.js?v=20261116-14';
+import {sealPhoto,openPhoto} from './crypto.js?v=20261116-15';
 const encoder=new TextEncoder(),decoder=new TextDecoder('utf-8',{fatal:true});
 const magic=encoder.encode('MEMORY-LOCAL-1\n');
 const uuid=/^[a-f0-9-]{36}$/;
@@ -36,6 +36,11 @@ export function mergeLocalPlaces(base,additions){
   return result;
 }
 function photoItems(places){return places.flatMap(place=>place.photos.flatMap(photo=>[photo,photo.thumbnail]));}
+export function decodeLocalState(value){
+  if(Array.isArray(value))return {places:validateLocalPlaces(value),hiddenIds:[]};
+  assert(value?.version===1&&Array.isArray(value.hiddenIds)&&value.hiddenIds.length<=2000&&value.hiddenIds.every(id=>typeof id==='string'&&/^[a-z0-9-]{1,90}$/.test(id)),'本机地图设置无效');
+  return {places:validateLocalPlaces(value.places),hiddenIds:[...new Set(value.hiddenIds)]};
+}
 
 export function createIndexedDBAdapter(){
   let pending;
@@ -69,16 +74,22 @@ export function createLocalAlbum({key,namespace,adapter=createIndexedDBAdapter()
   let queue=Promise.resolve();
   const exclusive=operation=>{const next=queue.then(operation);queue=next.catch(()=>{});return next;};
   async function read(){
-    const record=await adapter.getMeta(namespace);if(!record)return {places:[],revision:0};
+    const record=await adapter.getMeta(namespace);if(!record)return {places:[],hiddenIds:[],revision:0};
     const bytes=await openPhoto(new Uint8Array(record.bytes),key,'metadata:'+namespace);
-    try{return {places:validateLocalPlaces(JSON.parse(decoder.decode(bytes))),revision:record.revision,bytes:record.bytes};}finally{bytes.fill(0);}
+    try{return {...decodeLocalState(JSON.parse(decoder.decode(bytes))),revision:record.revision,bytes:record.bytes};}finally{bytes.fill(0);}
   }
-  async function save(places,revision,photos){
-    const plaintext=encoder.encode(JSON.stringify(validateLocalPlaces(places)));
+  async function save(places,revision,photos,hiddenIds=[]){
+    const state=decodeLocalState({version:1,places,hiddenIds});
+    const plaintext=encoder.encode(JSON.stringify({version:1,...state}));
     try{const sealed=await sealPhoto(plaintext,key,'metadata:'+namespace);await adapter.commit(namespace,revision,sealed,photos);}finally{plaintext.fill(0);}
   }
   return {
     async load(){return (await read()).places;},
+    async hiddenIds(){return (await read()).hiddenIds;},
+    setHidden(id,hidden){return exclusive(async()=>{
+      assert(typeof id==='string'&&/^[a-z0-9-]{1,90}$/.test(id),'地图钉编号无效');const current=await read(),ids=new Set(current.hiddenIds);
+      if(hidden)ids.add(id);else ids.delete(id);await save(current.places,current.revision,[],[...ids]);return [...ids];
+    });},
     async readPhoto(photo){const blob=await adapter.getPhoto(namespace,photo.id);return new Uint8Array(await blob.arrayBuffer());},
     add(place,images){return exclusive(async()=>{
       validateLocalPlaces([place]);const current=await read(),wanted=photoItems([place]);
@@ -87,10 +98,10 @@ export function createLocalAlbum({key,namespace,adapter=createIndexedDBAdapter()
       let total=0;for(const item of photoItems(current.places))total+=(await adapter.getPhoto(namespace,item.id)).size;
       for(const item of wanted){const image=images.find(image=>image.id===item.id);assert(image?.bytes instanceof Uint8Array&&image.bytes.length<5*1024*1024,'照片内容无效');sealed.push({id:item.id,blob:new Blob([await sealPhoto(image.bytes,key,item.id)])});}
       for(const image of sealed)total+=image.blob.size;assert(total<=MAX_BYTES,'本机新增照片已达 150 MB，请先导出备份后再整理');
-      await save([...current.places,place],current.revision,sealed);return [...current.places,place];
+      await save([...current.places,place],current.revision,sealed,current.hiddenIds.filter(id=>id!==place.targetId&&id!==place.id));return [...current.places,place];
     });},
     exportBackup(){return exclusive(async()=>{
-      const current=await read();assert(current.places.length,'还没有本机新增照片可备份');
+      const current=await read();assert(current.places.length||current.hiddenIds.length,'还没有本机新增照片或地图设置可备份');
       const parts=[],entries=[];let bytes=0;
       for(const photo of photoItems(current.places)){const blob=await adapter.getPhoto(namespace,photo.id);bytes+=blob.size;assert(bytes<=MAX_BYTES,'本机照片过多，请分批备份');entries.push({id:photo.id,length:blob.size});parts.push(blob);}
       const header=encoder.encode(JSON.stringify({namespace,metadata:base64(new Uint8Array(current.bytes)),entries}));assert(header.length<=512*1024,'备份清单过大');
@@ -101,11 +112,12 @@ export function createLocalAlbum({key,namespace,adapter=createIndexedDBAdapter()
       assert(file instanceof Blob&&file.size<=MAX_BYTES+600000&&file.size>magic.length+4,'备份文件无效或过大');
       const prefix=new Uint8Array(await file.slice(0,magic.length+4).arrayBuffer());assert(magic.every((value,i)=>prefix[i]===value),'请选择相册导出的 .mapalbum 备份');
       const length=new DataView(prefix.buffer).getUint32(magic.length,true);assert(length>0&&length<=512*1024,'备份清单大小无效');
-      let offset=magic.length+4+length;assert(offset<file.size,'备份文件不完整');
+      let offset=magic.length+4+length;assert(offset<=file.size,'备份文件不完整');
       const header=JSON.parse(decoder.decode(await file.slice(magic.length+4,offset).arrayBuffer()));
       assert(header.namespace===namespace,'这份备份属于另一个相册，请在原相册中恢复');assert(Array.isArray(header.entries)&&header.entries.length<=2000,'备份照片清单无效');
       const plaintext=await openPhoto(unbase64(header.metadata),key,'metadata:'+namespace);let incoming;
-      try{incoming=validateLocalPlaces(JSON.parse(decoder.decode(plaintext)));}finally{plaintext.fill(0);}
+      let incomingHidden;
+      try{const state=decodeLocalState(JSON.parse(decoder.decode(plaintext)));incoming=state.places;incomingHidden=state.hiddenIds;}finally{plaintext.fill(0);}
       const expected=new Set(photoItems(incoming).map(photo=>photo.id)),seen=new Set(),photos=[];
       for(const entry of header.entries){
         assert(entry&&expected.has(entry.id)&&!seen.has(entry.id)&&Number.isInteger(entry.length)&&entry.length>=28&&entry.length<5*1024*1024&&offset+entry.length<=file.size,'备份照片缺失、重复或长度无效');seen.add(entry.id);
@@ -119,7 +131,7 @@ export function createLocalAlbum({key,namespace,adapter=createIndexedDBAdapter()
       const added=photos.filter(photo=>!existingIds.has(photo.id));let total=added.reduce((sum,photo)=>sum+photo.blob.size,0);
       for(const id of existingIds)total+=(await adapter.getPhoto(namespace,id)).size;
       assert(total<=MAX_BYTES,'合并后的本机照片超过 150 MB，尚未导入');
-      await save(merged,current.revision,added);return merged;
+      await save(merged,current.revision,added,[...new Set([...current.hiddenIds,...incomingHidden])]);return merged;
     });}
   };
 }

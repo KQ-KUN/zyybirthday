@@ -1,8 +1,8 @@
-import {createPhotoCache} from './photo-cache.js?v=20261116-14';
-import {openAlbum,openPhoto,normalizeName,normalizeBirthday} from './crypto.js?v=20261116-14';
-import {downloadBytes} from './network.js?v=20261116-14';
-import {startAlbum} from './app.js?v=20261116-14';
-import {createLocalAlbum,mergeLocalPlaces} from './local-album.js?v=20261116-14';
+import {createPhotoCache} from './photo-cache.js?v=20261116-15';
+import {openAlbum,openPhoto,normalizeName,normalizeBirthday} from './crypto.js?v=20261116-15';
+import {downloadBytes} from './network.js?v=20261116-15';
+import {startAlbum} from './app.js?v=20261116-15';
+import {createLocalAlbum,mergeLocalPlaces} from './local-album.js?v=20261116-15';
 
 const form=document.getElementById('unlock-form');
 const error=document.getElementById('unlock-error');
@@ -14,8 +14,8 @@ submit.disabled=false;submit.textContent=originalLabel;
 
 async function hydrate(payload,key) {
   if(!payload || payload.version!==2 || !payload.album || !Array.isArray(payload.album.places) || !Array.isArray(payload.credits))throw new Error('相册格式无效');
-  const localStore=createLocalAlbum({key,namespace:envelope.salt});let additions=[],localWarning='';
-  try{additions=await localStore.load();}catch{localWarning='本机照片暂时无法读取，原有照片仍可浏览。请在同一浏览器中恢复备份。';}
+  const localStore=createLocalAlbum({key,namespace:envelope.salt});let additions=[],hiddenIds=[],localWarning='';
+  try{additions=await localStore.load();hiddenIds=await localStore.hiddenIds();}catch{localWarning='本机照片暂时无法读取，原有照片仍可浏览。请在同一浏览器中恢复备份。';}
   const basePlaces=JSON.parse(JSON.stringify(payload.album.places));
   const cache=createPhotoCache({
     dispose:url=>URL.revokeObjectURL(url),
@@ -37,7 +37,8 @@ async function hydrate(payload,key) {
   });
   const loadPhoto=(photo,options)=>cache.get(photo,options);
   loadPhoto.retain=photo=>cache.retain(photo.id);
-  window.memoryAlbum={album:{...payload.album,places:mergeLocalPlaces(basePlaces,additions)},basePlaces,localStore,localWarning,credits:payload.credits,loadPhoto,trimPhotos:cache.trim};
+  const allPlaces=mergeLocalPlaces(basePlaces,additions);
+  window.memoryAlbum={album:{...payload.album,places:allPlaces.filter(place=>!hiddenIds.includes(place.id))},allPlaces,hiddenIds,basePlaces,localStore,localWarning,credits:payload.credits,loadPhoto,trimPhotos:cache.trim};
   window.addEventListener('pagehide',()=>{cache.clear();delete window.memoryAlbum;},{once:true});
   return ()=>cache.clear();
 }

@@ -1,9 +1,9 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createLocalAlbum,validateLocalPlaces,mergeLocalPlaces} from '../local-album.js';
-import {openPhoto} from '../crypto.js';
+import {openPhoto,sealPhoto} from '../crypto.js';
 import {mosaicCells,mosaicPhotos} from '../photo-mosaic.js';
-import {uploadLocations} from '../local-upload.js';
+import {uploadLocations,searchLocations} from '../local-upload.js';
 function adapter(){const metadata=new Map(),photos=new Map();return {metadata,photos,getMeta:async id=>metadata.get(id),getPhoto:async(ns,id)=>photos.get(ns+'/'+id),async commit(ns,revision,bytes,entries){assert.equal(metadata.get(ns)?.revision||0,revision);for(const entry of entries)photos.set(ns+'/'+entry.id,entry.blob);metadata.set(ns,{revision:revision+1,bytes:bytes.slice()});}};}
 async function fixture(){
   const key=await crypto.subtle.generateKey({name:'AES-GCM',length:256},false,['encrypt','decrypt']),namespace='sample-album',db=adapter();
@@ -42,4 +42,20 @@ test('新增照片可以接续原地点，合并不修改原相册',async()=>{
 test('拼字网格只采样笔画，照片在整本相册中均匀选取',()=>{
   const pixels=new Uint8ClampedArray(8*8*4);pixels[(2*8+2)*4+3]=255;const cells=mosaicCells(pixels,8,8,4);assert.equal(cells.length,1);assert.equal(cells[0].x,0);assert.equal(cells[0].y,0);
   assert.throws(()=>mosaicCells(pixels,9,8));const photos=Array.from({length:124},(_,id)=>({id}));const selected=mosaicPhotos([{photos}]);assert.equal(selected.length,8);assert.equal(selected[0].id,0);assert.equal(selected.at(-1).id,123);
+});
+
+test('旧本机照片清单可迁移；移除地图钉后照片仍保存，可恢复',async()=>{
+  const f=await fixture();await f.store.add(f.place,f.images);
+  f.db.metadata.get(f.namespace).bytes=await sealPhoto(new TextEncoder().encode(JSON.stringify([f.place])),f.key,'metadata:'+f.namespace);
+  assert.deepEqual(await f.store.load(),[f.place]);assert.deepEqual(await f.store.hiddenIds(),[]);
+  await f.store.setHidden(f.place.id,true);assert.deepEqual(await f.store.hiddenIds(),[f.place.id]);assert.deepEqual(await f.store.load(),[f.place]);assert.equal(f.db.photos.size,2);
+  await f.store.setHidden(f.place.id,false);assert.deepEqual(await f.store.hiddenIds(),[]);
+});
+test('只有移除设置、没有新增照片时也可导出并恢复备份',async()=>{
+  const f=await fixture();await f.store.setHidden('west-lake',true);const backup=await f.store.exportBackup();
+  const target=createLocalAlbum({key:f.key,namespace:f.namespace,adapter:adapter()});await target.importBackup(backup);assert.deepEqual(await target.hiddenIds(),['west-lake']);assert.deepEqual(await target.load(),[]);
+});
+test('地点搜索覆盖全国城市和已有景点，按输入过滤而不是默认列出选项',()=>{
+  const locations=uploadLocations([{id:'lake',name:'西湖',region:'浙江 · 杭州',coordinates:[120,30],photos:[]}],[{name:'浙江',coordinates:[120,30]}]);
+  assert.deepEqual(searchLocations(locations,''),[]);assert.equal(searchLocations(locations,'西湖')[0].targetId,'lake');assert(searchLocations(locations,'西安').some(item=>item.name==='西安市'));assert(!searchLocations(locations,'西安').some(item=>item.name==='安康市'));assert(searchLocations(locations,'浙江杭州').some(item=>item.name==='杭州市'));assert.equal(searchLocations(locations,'不存在的景点123').length,0);
 });

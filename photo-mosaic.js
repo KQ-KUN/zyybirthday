@@ -11,13 +11,16 @@ export function mosaicCells(pixels,width,height,step=8){
   return cells;
 }
 export function createPhotoMosaic(canvas,{photos,loadPhoto,reduced=false}){
-  const width=320,height=340,step=8,ratio=Math.min(devicePixelRatio||1,1.5);
+  const width=320,height=340,step=6,ratio=Math.min(devicePixelRatio||1,1.5);
   canvas.width=width*ratio;canvas.height=height*ratio;
   const mask=document.createElement('canvas');mask.width=width;mask.height=height;
   const glyph=mask.getContext('2d',{willReadFrequently:true}),context=canvas.getContext('2d');
   if(!glyph||!context)return ()=>{};
-  glyph.fillStyle='#173d32';glyph.font='900 148px "Microsoft YaHei","PingFang SC",sans-serif';glyph.textAlign='center';glyph.textBaseline='middle';
-  for(const [index,char] of [...'生日快乐'].entries())glyph.fillText(char,80+(index%2)*160,88+Math.floor(index/2)*164);
+  glyph.fillStyle='#173d32';canvas.dataset.lettering='outlined-art';
+  for(const [index,letter] of birthdayLettering.entries()){
+    const [left,bottom,right,top]=letter.bounds,scale=Math.min(140/(right-left),142/(top-bottom));
+    glyph.save();glyph.translate(80+(index%2)*160,85+Math.floor(index/2)*168);glyph.rotate(index%2?.045:-.035);glyph.scale(scale,-scale);glyph.translate(-(left+right)/2,-(bottom+top)/2);const outline=new Path2D(letter.path);glyph.lineWidth=28;glyph.lineJoin='round';glyph.strokeStyle='#173d32';glyph.stroke(outline);glyph.fill(outline);glyph.restore();
+  }
   const cells=mosaicCells(glyph.getImageData(0,0,width,height).data,width,height,step),tiles=[],releases=[];
   let active=true,frame=0,progress=reduced?1:0;
   function draw(){
@@ -29,6 +32,7 @@ export function createPhotoMosaic(canvas,{photos,loadPhoto,reduced=false}){
       if(tile){context.drawImage(tile,x,y,step-0.7,step-0.7);context.fillStyle='#173d3228';context.fillRect(x,y,step-.7,step-.7);}
       else{context.fillStyle=['#315746','#677650','#a18454'][index%3];context.fillRect(x,y,step-.7,step-.7);}
     });
+    if(progress===1){context.globalCompositeOperation='destination-in';context.drawImage(mask,0,0);context.globalCompositeOperation='source-over';}
     canvas.dataset.progress=progress===1?'complete':'assembling';
   }
   for(const photo of photos){
@@ -43,3 +47,4 @@ export function createPhotoMosaic(canvas,{photos,loadPhoto,reduced=false}){
   if(!reduced){const started=performance.now();const tick=now=>{progress=Math.min(1,(now-started)/1900);draw();if(progress<1)frame=requestAnimationFrame(tick);};frame=requestAnimationFrame(tick);}
   return ()=>{active=false;cancelAnimationFrame(frame);releases.forEach(release=>release());tiles.forEach(tile=>{tile.width=tile.height=1;});};
 }
+import {birthdayLettering} from './birthday-lettering.js?v=20261116-15';

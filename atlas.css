@@ -292,3 +292,14 @@ button:focus-visible,a:focus-visible{outline-color:var(--forest)}.album-sidebar 
 #upload-form input,#upload-form select{width:100%;min-height:46px;border:1px solid var(--line);background:#fffef9;color:var(--forest);border-radius:9px;padding:10px;font:16px var(--sans)}
 #upload-form .primary-button{margin-top:12px;min-height:48px;font-size:14px}.upload-status{min-height:24px;margin:12px 0;font:14px/1.6 var(--sans);color:var(--forest)}
 .backup-actions{display:flex;gap:10px;border-top:1px solid var(--line);padding-top:16px}.backup-actions button{flex:1;font-size:13px}
+
+.map-marker .pin-label,.paper-pin .pin-label{right:auto;transform:none;overflow:hidden;text-overflow:ellipsis;height:25px;box-sizing:border-box}
+
+.location-search{position:relative}.location-results{position:absolute;left:0;right:0;top:calc(100% + 5px);z-index:30;max-height:220px;overflow-y:auto;border:1px solid var(--line);border-radius:12px;background:var(--paper-light);box-shadow:0 10px 35px #173d3226}
+.location-results button{display:flex;width:100%;flex-direction:column;align-items:flex-start;gap:3px;min-height:54px;padding:10px 12px;border:0;border-bottom:1px solid var(--line);text-align:left;background:none;color:var(--forest)}
+.location-results strong{font:500 15px var(--sans)}.location-results span,.location-results p{font:12px/1.5 var(--sans);color:var(--muted)}.location-results p{padding:14px}.location-results [aria-selected="true"]{background:#e6eddf}
+.removed-pins{margin:12px 0;font:14px var(--sans)}.removed-pins summary{min-height:44px;display:flex;align-items:center;cursor:pointer}.removed-pins summary::after{content:'＋';margin-left:auto}.removed-pins[open] summary::after{content:'−'}.removed-pins div>div{display:flex;align-items:center;justify-content:space-between;padding:5px 0;gap:12px}.removed-pins button{min-height:44px;padding:8px 16px;border:1px solid var(--line);background:none;border-radius:22px;color:var(--forest)}
+.pin-delete{position:absolute;right:0;bottom:3px;width:44px;height:44px;border:1px solid #d8e3c645;border-radius:50%;background:#ffffff0b;color:var(--cream);display:grid;place-items:center;z-index:4}.pin-delete svg{width:19px;height:19px}.place-card .card-arrow{display:none}.place-card .place-index{display:none}
+.delete-pin-dialog{width:min(360px,calc(100% - 32px));padding:25px;border:0;border-radius:20px;background:var(--paper-light);color:var(--forest)}.delete-pin-dialog h2{font:400 28px var(--serif);margin-bottom:20px}.delete-pin-dialog strong{display:block;font:500 18px var(--sans);margin-bottom:12px}.delete-pin-dialog p{font:14px/1.7 var(--sans);color:var(--muted);margin:10px 0}.delete-pin-actions{display:flex;gap:10px;margin-top:22px}.delete-pin-actions button{flex:1;min-height:46px}.delete-pin-actions .primary-button{background:#8c5144;border-color:#8c5144}
+
+.map-marker .pin-label,.paper-pin .pin-label{max-width:132px}

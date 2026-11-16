@@ -1,9 +1,9 @@
-import {layoutPins} from './pin-layout.js?v=20261116-14';
-import {administrativeAreas,administrativeLabels} from './administrative-areas.js?v=20261116-14';
-import {pushpinSvg} from './pushpin.js?v=20261116-14';
-import {regionLabels} from './region-labels.js?v=20261116-14';
-import {createCameraMotion,mixCamera,cameraEase} from './transitions.js?v=20261116-14';
-import {geography,land} from './geography.js?v=20261116-14';
+import {layoutPins,applyPinLabel} from './pin-layout.js?v=20261116-15';
+import {administrativeAreas,administrativeLabels} from './administrative-areas.js?v=20261116-15';
+import {pushpinSvg} from './pushpin.js?v=20261116-15';
+import {regionLabels} from './region-labels.js?v=20261116-15';
+import {createCameraMotion,mixCamera,cameraEase} from './transitions.js?v=20261116-15';
+import {geography,land} from './geography.js?v=20261116-15';
 
 export function project([longitude,latitude]) {
   const radians=Math.max(-85,Math.min(85,latitude))*Math.PI/180;
@@ -52,7 +52,7 @@ export function createPaperMap(container,places,onSelect,onMove) {
   function screenPoint(coordinates){const point=project(coordinates),scale=2**zoom/8;return tiltedPoint((point[0]-center[0])*scale,(point[1]-center[1])*scale);}
   function refreshPins(){
     const layout=layoutPins(places,screenPoint,{selectedId:selectedPin,width:surface.clientWidth,height:surface.clientHeight,top:padding.top,bottom:padding.bottom,labelsVisible:zoom>=5.4});
-    for(const pin of pins){pin.offset=layout.get(pin.placeId).offset;pin.button.classList.toggle('show-label',layout.get(pin.placeId).showLabel);}
+    for(const pin of pins){pin.offset=layout.get(pin.placeId).offset;applyPinLabel(pin.button,layout.get(pin.placeId));}
   }
   function draw(duration=0){
     container.dataset.view=pitch>1?'tilted':'2d';container.dataset.zoom=zoom.toFixed(2);container.dataset.pitch=String(pitch);
