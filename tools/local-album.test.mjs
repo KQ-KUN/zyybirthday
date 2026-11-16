@@ -39,9 +39,9 @@ test('新增照片可以接续原地点，合并不修改原相册',async()=>{
   assert.equal(base[0].photos.length,0);assert.equal(merged.length,1);assert.equal(merged[0].photos.length,1);
   const entries=uploadLocations(base,[{name:'浙江',coordinates:[120,30]}],[]);assert.equal(entries[0].targetId,'west-lake');assert.equal(entries[1].group,'省份');
 });
-test('拼字网格只采样笔画，照片在整本相册中均匀选取',()=>{
+test('拼字网格只采样笔画，并从整本相册中选择不重复的照片',()=>{
   const pixels=new Uint8ClampedArray(8*8*4);pixels[(2*8+2)*4+3]=255;const cells=mosaicCells(pixels,8,8,4);assert.equal(cells.length,1);assert.equal(cells[0].x,0);assert.equal(cells[0].y,0);
-  assert.throws(()=>mosaicCells(pixels,9,8));const photos=Array.from({length:124},(_,id)=>({id}));const selected=mosaicPhotos([{photos}]);assert.equal(selected.length,8);assert.equal(selected[0].id,0);assert.equal(selected.at(-1).id,123);
+  assert.throws(()=>mosaicCells(pixels,9,8));const photos=Array.from({length:124},(_,id)=>({id}));const selected=mosaicPhotos([{photos}]);assert.equal(selected.length,8);assert.equal(new Set(selected.map(photo=>photo.id)).size,8);assert(selected.every(photo=>photo.id>=0&&photo.id<124));
 });
 
 test('旧本机照片清单可迁移；移除地图钉后照片仍保存，可恢复',async()=>{

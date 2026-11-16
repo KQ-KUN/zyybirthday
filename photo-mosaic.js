@@ -1,9 +1,13 @@
-import {loadOpeningPhoto} from './opening-loader.js?v=20261116-22';
-export function mosaicPhotos(places,limit=8,hasPreview){
+import {loadOpeningPhoto} from './opening-loader.js?v=20261116-23';
+function shuffle(items,random){for(let index=items.length-1;index>0;index--){const other=Math.floor(random()*(index+1));[items[index],items[other]]=[items[other],items[index]];}return items;}
+export function mosaicPhotos(places,limit=8,hasPreview,random=Math.random){
   limit=Math.max(1,Math.min(12,Math.trunc(limit)||8));
-  let photos=(places||[]).flatMap(place=>(place.photos||[]).map((photo,index)=>({...photo,place,index})));if(hasPreview){const ready=photos.filter(photo=>hasPreview(photo.thumbnail||photo));if(ready.length)photos=ready;}if(photos.length<=limit)return photos;
-  if(limit===1)return [photos[0]];
-  return Array.from({length:limit},(_,index)=>photos[Math.round(index*(photos.length-1)/(limit-1))]);
+  let photos=(places||[]).flatMap(place=>(place.photos||[]).map((photo,index)=>({...photo,place,index})));if(hasPreview){const ready=photos.filter(photo=>hasPreview(photo.thumbnail||photo));if(ready.length)photos=ready;}return shuffle(photos,random).slice(0,limit);
+}
+export function mosaicAssignments(count,photoCount,random=Math.random){
+  if(!photoCount)return [];const assignments=[];
+  while(assignments.length<count){const batch=shuffle(Array.from({length:photoCount},(_,index)=>index),random);if(photoCount>1&&assignments.at(-1)===batch[0])[batch[0],batch[1]]=[batch[1],batch[0]];assignments.push(...batch.slice(0,count-assignments.length));}
+  return assignments;
 }
 export function mosaicCells(pixels,width,height,step=8){
   if(pixels.length!==width*height*4||step<2||step>32)throw new Error('字形网格无效');
@@ -22,37 +26,38 @@ export function createPhotoMosaic(canvas,{photos,loadPhoto,reduced=false,onOpenP
     const [left,bottom,right,top]=letter.bounds,scale=Math.min(140/(right-left),142/(top-bottom));
     glyph.save();glyph.translate(80+(index%2)*160,85+Math.floor(index/2)*168);glyph.rotate(index%2?.045:-.035);glyph.scale(scale,-scale);glyph.translate(-(left+right)/2,-(bottom+top)/2);const outline=new Path2D(letter.path);glyph.lineWidth=28;glyph.lineJoin='round';glyph.strokeStyle='#173d32';glyph.stroke(outline);glyph.fill(outline);glyph.restore();
   }
-  const cells=mosaicCells(glyph.getImageData(0,0,width,height).data,width,height,step),tiles=[],releases=[];
+  const cells=mosaicCells(glyph.getImageData(0,0,width,height).data,width,height,step),tiles=Array(photos.length).fill(null),assignments=mosaicAssignments(cells.length,photos.length),releases=[];
+  const tileForCell=index=>tiles[assignments[index]]||tiles.find(Boolean);
   const controller=new AbortController();let active=true,frame=0,progress=1,started=false;
   function draw(){
     if(!active)return;context.setTransform(ratio,0,0,ratio,0,0);context.clearRect(0,0,width,height);
-    if(!tiles.length){context.globalAlpha=.65;context.drawImage(mask,0,0);context.globalAlpha=1;canvas.dataset.progress='loading';return;}
+    if(!tiles.some(Boolean)){context.globalAlpha=.65;context.drawImage(mask,0,0);context.globalAlpha=1;canvas.dataset.progress='loading';return;}
     context.globalAlpha=.12;context.drawImage(mask,0,0);context.globalAlpha=1;
     const eased=1-(1-progress)**3;
     cells.forEach((cell,index)=>{
-      const x=cell.startX+(cell.x-cell.startX)*eased,y=cell.startY+(cell.y-cell.startY)*eased,tile=tiles[index%Math.max(1,tiles.length)];
+      const x=cell.startX+(cell.x-cell.startX)*eased,y=cell.startY+(cell.y-cell.startY)*eased,tile=tileForCell(index);
       if(tile){context.drawImage(tile.canvas,x,y,step-0.7,step-0.7);context.fillStyle='#173d3228';context.fillRect(x,y,step-.7,step-.7);}
       else{context.fillStyle=['#315746','#677650','#a18454'][index%3];context.fillRect(x,y,step-.7,step-.7);}
     });
     if(progress===1){context.globalCompositeOperation='destination-in';context.drawImage(mask,0,0);context.globalCompositeOperation='source-over';}
     canvas.dataset.progress=progress===1?'complete':'assembling';
   }
-  for(const photo of photos){
+  for(const [slot,photo] of photos.entries()){
     const source=photo.thumbnail||photo;releases.push(loadPhoto.retain(source));
     loadOpeningPhoto(source,loadPhoto,{signal:controller.signal,isRelevant:()=>active}).then(async url=>{
       if(!active)return;const image=new Image();image.src=url;await image.decode();if(!active)return;
       const tile=document.createElement('canvas');tile.width=tile.height=40;const painter=tile.getContext('2d'),side=Math.min(image.naturalWidth,image.naturalHeight);
-      painter.drawImage(image,(image.naturalWidth-side)/2,(image.naturalHeight-side)/2,side,side,0,0,40,40);tiles.push({canvas:tile,photo});onPhotoReady(photo,url);canvas.dataset.photos=String(tiles.length);
+      painter.drawImage(image,(image.naturalWidth-side)/2,(image.naturalHeight-side)/2,side,side,0,0,40,40);tiles[slot]={canvas:tile,photo};onPhotoReady(photo,url);canvas.dataset.photos=String(tiles.filter(Boolean).length);canvas.dataset.photoOrder=photos.map(item=>item.id).join(',');
       if(!started){started=true;if(!reduced){progress=0;const began=performance.now();const tick=now=>{if(!active)return;progress=Math.min(1,(now-began)/1900);draw();if(progress<1)frame=requestAnimationFrame(tick);};frame=requestAnimationFrame(tick);}}
       draw();
     }).catch(()=>{});
   }
   draw();
   const open=event=>{
-    if(!active||!tiles.length)return;const bounds=canvas.getBoundingClientRect(),x=(event.clientX-bounds.left)*width/bounds.width,y=(event.clientY-bounds.top)*height/bounds.height,eased=1-(1-progress)**3;
+    if(!active||!tiles.some(Boolean))return;const bounds=canvas.getBoundingClientRect(),x=(event.clientX-bounds.left)*width/bounds.width,y=(event.clientY-bounds.top)*height/bounds.height,eased=1-(1-progress)**3;
     const index=cells.findIndex(cell=>{const left=cell.startX+(cell.x-cell.startX)*eased,top=cell.startY+(cell.y-cell.startY)*eased;return x>=left&&x<=left+step&&y>=top&&y<=top+step;});
-    if(index>=0)onOpenPhoto(tiles[index%tiles.length].photo,photos,canvas);
+    if(index>=0)onOpenPhoto(tileForCell(index).photo,photos,canvas);
   };canvas.addEventListener('click',open);
-  return ()=>{active=false;controller.abort();cancelAnimationFrame(frame);canvas.removeEventListener('click',open);releases.forEach(release=>release());tiles.forEach(tile=>{tile.canvas.width=tile.canvas.height=1;});};
+  return ()=>{active=false;controller.abort();cancelAnimationFrame(frame);canvas.removeEventListener('click',open);releases.forEach(release=>release());tiles.filter(Boolean).forEach(tile=>{tile.canvas.width=tile.canvas.height=1;});};
 }
-import {birthdayLettering} from './birthday-lettering.js?v=20261116-22';
+import {birthdayLettering} from './birthday-lettering.js?v=20261116-23';

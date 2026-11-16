@@ -12,6 +12,7 @@ export function createMusicController({audio,tracks,preference={},onChange=()=>{
     try{await audio.play();if(ticket!==revision)return false;status='playing';emit();return true;}
     catch(error){if(ticket!==revision)return false;wanted=false;status=error.name==='NotAllowedError'?'blocked':'error';emit();return false;}
   }
+  async function startAutomatically(){const started=await play();if(!started&&status==='blocked')autoStart=true;return started;}
   function pause(){autoStart=false;wanted=false;revision++;audio.pause();status='paused';save(false);emit();}
   function setMuted(value){audio.muted=Boolean(value);save(wanted||!audio.paused);emit();}
   function select(next){if(!Number.isInteger(next)||next<0||next>=tracks.length)return Promise.resolve(false);revision++;audio.pause();index=next;audio.removeAttribute('src');return play();}
@@ -21,5 +22,5 @@ export function createMusicController({audio,tracks,preference={},onChange=()=>{
   listen('timeupdate',emit);listen('loadedmetadata',emit);
   listen('ended',()=>{if(wanted)select((index+1)%tracks.length);});
   listen('error',()=>{wanted=false;status='error';emit();});
-  return {snapshot,play,pause,select,setMuted,next:()=>select((index+1)%tracks.length),previous:()=>select((index+tracks.length-1)%tracks.length),toggle:()=>!audio.paused||status==='loading'?pause():play(),startFromGesture(){if(autoStart)return play();},seek(value){if(Number.isFinite(value)&&Number.isFinite(audio.duration)&&audio.duration>0){audio.currentTime=Math.max(0,Math.min(audio.duration,value));emit();}},dispose(){revision++;wanted=false;audio.pause();listeners.forEach(([type,handler])=>audio.removeEventListener(type,handler));audio.removeAttribute('src');audio.load();}};
+  return {snapshot,play,pause,select,setMuted,startAutomatically,next:()=>select((index+1)%tracks.length),previous:()=>select((index+tracks.length-1)%tracks.length),toggle:()=>!audio.paused||status==='loading'?pause():play(),startFromGesture(){if(autoStart)return play();},seek(value){if(Number.isFinite(value)&&Number.isFinite(audio.duration)&&audio.duration>0){audio.currentTime=Math.max(0,Math.min(audio.duration,value));emit();}},dispose(){revision++;wanted=false;audio.pause();listeners.forEach(([type,handler])=>audio.removeEventListener(type,handler));audio.removeAttribute('src');audio.load();}};
 }

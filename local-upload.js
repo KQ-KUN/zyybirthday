@@ -1,4 +1,4 @@
-import {cityLocations} from './location-index.js?v=20261116-22';
+import {cityLocations} from './location-index.js?v=20261116-23';
 export function uploadLocations(places,regions){
   return [
     ...places.map(place=>({id:place.id,name:place.name,region:place.region,coordinates:place.coordinates,targetId:place.id,group:'已有地点'})),
