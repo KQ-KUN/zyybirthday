@@ -1,5 +1,6 @@
 // 优先结构化克隆不可导出的 CryptoKey；不支持 IndexedDB 时使用本机解锁凭据，不保存姓名和生日。
-export function createDeviceStore({budget=128*1024*1024,storage=globalThis.localStorage}={}){
+export function createDeviceStore({budget=128*1024*1024,storage}={}){
+  if(storage===undefined)try{storage=globalThis.localStorage;}catch{storage=null;}
   let pending;
   const db=()=>pending??=new Promise((resolve,reject)=>{
     const timer=setTimeout(()=>reject(new Error('本机存储连接超时')),2500),request=indexedDB.open('memory-map-device',1);
