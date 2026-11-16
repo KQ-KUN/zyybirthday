@@ -1,4 +1,4 @@
-import {sealPhoto,openPhoto} from './crypto.js?v=20261116-24';
+import {sealPhoto,openPhoto} from './crypto.js?v=20261116-25';
 const encoder=new TextEncoder(),decoder=new TextDecoder('utf-8',{fatal:true});
 const magic=encoder.encode('MEMORY-LOCAL-1\n');
 const uuid=/^[a-f0-9-]{36}$/;
