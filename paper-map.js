@@ -1,9 +1,9 @@
-import {layoutPins} from './pin-layout.js?v=20261116-13';
-import {administrativeAreas,administrativeLabels} from './administrative-areas.js?v=20261116-13';
-import {pushpinSvg} from './pushpin.js?v=20261116-13';
-import {regionLabels} from './region-labels.js?v=20261116-13';
-import {createCameraMotion,mixCamera,mixFlight,cameraEase} from './transitions.js?v=20261116-13';
-import {geography,land} from './geography.js?v=20261116-13';
+import {layoutPins} from './pin-layout.js?v=20261116-14';
+import {administrativeAreas,administrativeLabels} from './administrative-areas.js?v=20261116-14';
+import {pushpinSvg} from './pushpin.js?v=20261116-14';
+import {regionLabels} from './region-labels.js?v=20261116-14';
+import {createCameraMotion,mixCamera,cameraEase} from './transitions.js?v=20261116-14';
+import {geography,land} from './geography.js?v=20261116-14';
 
 export function project([longitude,latitude]) {
   const radians=Math.max(-85,Math.min(85,latitude))*Math.PI/180;
@@ -101,9 +101,8 @@ export function createPaperMap(container,places,onSelect,onMove) {
       const target=current();if(options.center)target.center=project(options.center);
       if(options.zoom!==undefined)target.zoom=Math.max(1.5,Math.min(12,options.zoom));
       if(options.pitch!==undefined)target.pitch=options.pitch;if(options.bearing!==undefined)target.bearing=options.bearing;if(options.padding)target.padding=options.padding;
-      motion.to(target,options.duration||0,{easing:options.easing||cameraEase,interpolate:options.flight?mixFlight:mixCamera});
+      motion.to(target,options.duration||0,{easing:options.easing||cameraEase,interpolate:mixCamera});
     },
-    flyTo(options){api.easeTo({...options,flight:true});},
     fitPlaces(list,options){
       const points=list.map(place=>project(place.coordinates)),xs=points.map(p=>p[0]),ys=points.map(p=>p[1]);
       const target=current();target.padding=options.padding;target.center=[(Math.min(...xs)+Math.max(...xs))/2,(Math.min(...ys)+Math.max(...ys))/2];

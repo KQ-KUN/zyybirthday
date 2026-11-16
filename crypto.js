@@ -68,7 +68,7 @@ export async function resealAlbum(payload,envelope,name,birthday){
 
 export async function openAlbum(envelope,name,birthday) {
   const payload=await decryptAlbum(envelope,name,birthday);
-  const key=await deriveKey(name,birthday,fromBase64(envelope.salt),['decrypt']);
+  const key=await deriveKey(name,birthday,fromBase64(envelope.salt),['encrypt','decrypt']);
   return {payload,key};
 }
 export async function sealPhoto(bytes,key,id) {

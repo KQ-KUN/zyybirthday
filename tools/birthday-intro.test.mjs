@@ -1,15 +1,15 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {birthdayLabel,introPhotos,createIntroTimeline} from '../birthday-intro.js';
+import {birthdayLabel,createIntroTimeline} from '../birthday-intro.js';
+import {mosaicPhotos} from '../photo-mosaic.js';
 
 test('开场日期来自已解锁的数据，拒绝无效日期，不补造生日',()=>{
   assert.equal(birthdayLabel('2000-02-29'),'2000 · 02 · 29');
   for(const value of ['2001-02-29','2000-02-31','2000-13-01',undefined,''])assert.equal(birthdayLabel(value),'');
 });
-test('开场只选三个不同地区，优先竖幅，不修改相册',()=>{
-  const places=Array.from({length:8},(_,index)=>({id:String(index),region:`地区${index%4} · 城市`,photos:[{width:200,height:100},{width:100,height:200}]}));
-  const before=structuredClone(places),selected=introPhotos(places);
-  assert.equal(selected.length,3);assert.equal(new Set(selected.map(entry=>entry.place.region)).size,3);assert(selected.every(entry=>entry.photo.height>entry.photo.width));assert.deepEqual(places,before);assert.deepEqual(introPhotos([]),[]);
+test('两百张照片只选择八张拼字，空相册和单张照片也可用',()=>{
+  const photos=Array.from({length:220},(_,id)=>({id}));
+  assert.equal(mosaicPhotos([{photos}]).length,8);assert.deepEqual(mosaicPhotos([{photos}],1),[photos[0]]);assert.deepEqual(mosaicPhotos([]),[]);
 });
 test('跳过、自动结束和返回取消互不重复，减少动态效果不移动照片',()=>{
   let jobs=[],finished=0,converged=0;

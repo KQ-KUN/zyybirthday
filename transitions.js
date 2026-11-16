@@ -76,13 +76,6 @@ export function mixCamera(from,to,progress){
   const mix=(a,b)=>a+(b-a)*progress;
   return {center:from.center.map((value,index)=>mix(value,to.center[index])),zoom:mix(from.zoom,to.zoom),pitch:mix(from.pitch,to.pitch),bearing:mix(from.bearing,to.bearing),padding:Object.fromEntries(Object.keys(from.padding).map(key=>[key,mix(from.padding[key],to.padding[key])]))};
 }
-export function mixFlight(from,to,progress){
-  const camera=mixCamera(from,to,progress);
-  const degrees=Math.hypot(to.center[0]-from.center[0],to.center[1]-from.center[1])/4096*360;
-  const wide=Math.max(3.8,Math.min(from.zoom,to.zoom,Math.log2(360/Math.max(degrees,.2))-.7));
-  camera.zoom-=Math.max(0,Math.min(from.zoom,to.zoom)-wide)*Math.sin(Math.PI*progress);
-  return camera;
-}
 export function createCameraMotion(initial,paint,{requestFrame=callback=>requestAnimationFrame(callback),cancelFrame=id=>cancelAnimationFrame(id),now=()=>performance.now()}={}){
   let current=copyCamera(initial),frame=0,moving=false;
   function stop(){cancelFrame(frame);frame=0;moving=false;}

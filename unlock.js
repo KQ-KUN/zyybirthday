@@ -1,7 +1,8 @@
-import {createPhotoCache} from './photo-cache.js?v=20261116-13';
-import {openAlbum,openPhoto,normalizeName,normalizeBirthday} from './crypto.js?v=20261116-13';
-import {downloadBytes} from './network.js?v=20261116-13';
-import {startAlbum} from './app.js?v=20261116-13';
+import {createPhotoCache} from './photo-cache.js?v=20261116-14';
+import {openAlbum,openPhoto,normalizeName,normalizeBirthday} from './crypto.js?v=20261116-14';
+import {downloadBytes} from './network.js?v=20261116-14';
+import {startAlbum} from './app.js?v=20261116-14';
+import {createLocalAlbum,mergeLocalPlaces} from './local-album.js?v=20261116-14';
 
 const form=document.getElementById('unlock-form');
 const error=document.getElementById('unlock-error');
@@ -11,8 +12,11 @@ let busy=false;
 const envelope=JSON.parse(document.getElementById('sealed-album').textContent);
 submit.disabled=false;submit.textContent=originalLabel;
 
-function hydrate(payload,key) {
+async function hydrate(payload,key) {
   if(!payload || payload.version!==2 || !payload.album || !Array.isArray(payload.album.places) || !Array.isArray(payload.credits))throw new Error('相册格式无效');
+  const localStore=createLocalAlbum({key,namespace:envelope.salt});let additions=[],localWarning='';
+  try{additions=await localStore.load();}catch{localWarning='本机照片暂时无法读取，原有照片仍可浏览。请在同一浏览器中恢复备份。';}
+  const basePlaces=JSON.parse(JSON.stringify(payload.album.places));
   const cache=createPhotoCache({
     dispose:url=>URL.revokeObjectURL(url),
     isVisible:url=>[...document.images].some(img=>img.src===url),
@@ -21,7 +25,8 @@ function hydrate(payload,key) {
     if(!/^sealed\/[a-f0-9-]{36}\.bin$/.test(photo.src) || !/^[a-f0-9-]{36}$/.test(photo.id))throw new Error('照片路径无效');
 
       let bytes;
-      for(let attempt=0;attempt<2;attempt++){
+      if(photo.local)bytes=await localStore.readPhoto(photo);
+      else for(let attempt=0;attempt<2;attempt++){
         try{bytes=await downloadBytes(photo.src,{timeoutMs:25000});break;}
         catch(e){if(attempt===1)throw e;await new Promise(resolve=>setTimeout(resolve,400));}
       }
@@ -32,7 +37,7 @@ function hydrate(payload,key) {
   });
   const loadPhoto=(photo,options)=>cache.get(photo,options);
   loadPhoto.retain=photo=>cache.retain(photo.id);
-  window.memoryAlbum={album:payload.album,credits:payload.credits,loadPhoto,trimPhotos:cache.trim};
+  window.memoryAlbum={album:{...payload.album,places:mergeLocalPlaces(basePlaces,additions)},basePlaces,localStore,localWarning,credits:payload.credits,loadPhoto,trimPhotos:cache.trim};
   window.addEventListener('pagehide',()=>{cache.clear();delete window.memoryAlbum;},{once:true});
   return ()=>cache.clear();
 }
@@ -52,7 +57,7 @@ form.addEventListener('submit',async(event)=>{
     let payload,key;
     try{({payload,key}=await openAlbum(envelope,name,birthday));}catch{error.textContent='信息不匹配，请检查姓名和生日月日。';return;}
     nameInput.value='';birthdayInput.value='';name='';birthday='';
-    const disposePhotos=hydrate(payload,key);
+    const disposePhotos=await hydrate(payload,key);
     document.getElementById('unlock-screen').hidden=true;
     document.getElementById('app').hidden=false;
     document.body.classList.add('album-unlocked');
