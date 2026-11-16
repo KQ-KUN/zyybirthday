@@ -303,3 +303,12 @@ button:focus-visible,a:focus-visible{outline-color:var(--forest)}.album-sidebar 
 .delete-pin-dialog{width:min(360px,calc(100% - 32px));padding:25px;border:0;border-radius:20px;background:var(--paper-light);color:var(--forest)}.delete-pin-dialog h2{font:400 28px var(--serif);margin-bottom:20px}.delete-pin-dialog strong{display:block;font:500 18px var(--sans);margin-bottom:12px}.delete-pin-dialog p{font:14px/1.7 var(--sans);color:var(--muted);margin:10px 0}.delete-pin-actions{display:flex;gap:10px;margin-top:22px}.delete-pin-actions button{flex:1;min-height:46px}.delete-pin-actions .primary-button{background:#8c5144;border-color:#8c5144}
 
 .map-marker .pin-label,.paper-pin .pin-label{max-width:132px}
+
+.auto-browse{display:block;width:100%;min-height:40px;margin-top:7px;border:1px solid #e4eadb45;border-radius:22px;background:#f7f0df0b;color:inherit;font:13px var(--sans)}
+.auto-browse[aria-pressed="true"]{background:#f7f0df;color:var(--forest)}
+.photo-item{position:relative}.photo-item::before{content:'';position:absolute;inset:0 0 auto;aspect-ratio:4/3;background:#e3e6dc;border-radius:9px;pointer-events:none}.photo-item img,.photo-item>span{position:relative}
+.photo-item[data-image-state="loading"]::after,.photo-item[data-image-state="error"]::after{position:absolute;top:30px;left:0;right:0;text-align:center;font:12px var(--sans);color:#61705e;pointer-events:none}.photo-item[data-image-state="loading"]::after{content:'正在加载…'}.photo-item[data-image-state="error"]::after{content:'轻点重试'}
+.grid-retry{display:block;margin:12px 20px 0;padding:9px 14px;min-height:44px;border:1px solid var(--line);border-radius:22px;background:none;color:var(--forest);font:13px var(--sans)}
+.photo-retry{position:absolute;z-index:6;left:50%;bottom:80px;transform:translateX(-50%);min-height:44px;padding:10px 18px;border:1px solid #fff8;border-radius:24px;background:#173d32;color:#fffdf6}
+.card-photo-retry{position:absolute;z-index:5;top:55px;left:50%;transform:translateX(-50%);min-height:44px;padding:8px 16px;border:1px solid #fff7;border-radius:22px;background:#173d32e8;color:var(--cream)}
+.forget-device{display:block;min-height:44px;padding:9px 2px;border:0;background:none;color:var(--muted);font:13px var(--sans)}

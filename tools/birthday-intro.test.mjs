@@ -9,7 +9,8 @@ test('开场日期来自已解锁的数据，拒绝无效日期，不补造生�
 });
 test('两百张照片只选择八张拼字，空相册和单张照片也可用',()=>{
   const photos=Array.from({length:220},(_,id)=>({id}));
-  assert.equal(mosaicPhotos([{photos}]).length,8);assert.deepEqual(mosaicPhotos([{photos}],1),[photos[0]]);assert.deepEqual(mosaicPhotos([]),[]);
+  assert.equal(mosaicPhotos([{photos}]).length,8);assert.equal(mosaicPhotos([{photos}],1)[0].id,photos[0].id);assert.deepEqual(mosaicPhotos([]),[]);
+  const place={id:'place',photos};const tile=mosaicPhotos([place],1)[0];assert.equal(tile.place,place);assert.equal(tile.index,0);
 });
 test('生日开场只在主动关闭后退出，所有计时回调执行后仍然停留',()=>{
   let jobs=[],finished=0,converged=0;

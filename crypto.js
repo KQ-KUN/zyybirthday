@@ -29,11 +29,11 @@ function fromBase64(value) {
   if(typeof value!=='string' || !/^[A-Za-z0-9+/]*={0,2}$/.test(value) || value.length%4)throw new Error('加密文件格式无效');
   return Uint8Array.from(atob(value),c=>c.charCodeAt(0));
 }
-export async function deriveKey(name,birthday,salt,usages) {
+export async function deriveKey(name,birthday,salt,usages,extractable=false) {
   const input=encoder.encode(normalizeName(name)+'\n'+normalizeBirthday(birthday));
   try {
     const material=await crypto.subtle.importKey('raw',input,'PBKDF2',false,['deriveKey']);
-    return await crypto.subtle.deriveKey({name:'PBKDF2',hash:'SHA-256',salt,iterations:ITERATIONS},material,{name:'AES-GCM',length:256},false,usages);
+    return await crypto.subtle.deriveKey({name:'PBKDF2',hash:'SHA-256',salt,iterations:ITERATIONS},material,{name:'AES-GCM',length:256},extractable,usages);
   } finally {input.fill(0);}
 }
 export async function encryptAlbum(payload,name,birthday) {
@@ -47,10 +47,13 @@ export async function encryptAlbum(payload,name,birthday) {
   } finally {plaintext.fill(0);}
 }
 export async function decryptAlbum(envelope,name,birthday) {
+  const key=await deriveKey(name,birthday,fromBase64(envelope.salt),['decrypt']);
+  return decryptAlbumWithKey(envelope,key);
+}
+export async function decryptAlbumWithKey(envelope,key) {
   if(!envelope || envelope.format!==FORMAT || envelope.kdf!=='PBKDF2-SHA256' || envelope.iterations!==ITERATIONS)throw new Error('加密文件版本无效');
   const salt=fromBase64(envelope.salt),iv=fromBase64(envelope.iv),ciphertext=fromBase64(envelope.ciphertext);
   if(salt.length!==16 || iv.length!==12 || ciphertext.length<16 || ciphertext.length>100*1024*1024)throw new Error('加密文件大小无效');
-  const key=await deriveKey(name,birthday,salt,['decrypt']);
   const plaintext=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv,additionalData:aad,tagLength:128},key,ciphertext));
   try {return JSON.parse(decoder.decode(plaintext));}finally{plaintext.fill(0);}
 }

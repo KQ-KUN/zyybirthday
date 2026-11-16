@@ -37,3 +37,18 @@ test('异步解码中的照片持有租约，释放后才允许回收',async()=>
   await cache.get({id:'other'});cache.trim();assert(!revoked.includes('decoding'));
   release();await cache.get({id:'last'});assert(revoked.includes('decoding'));cache.clear();
 });
+
+test('拼字消费者退出后，共享同一排队照片的相册消费者仍会加载',async()=>{
+  let unblock,first=true;const calls=[];
+  const cache=createPhotoCache({concurrency:1,dispose:()=>{},load:async photo=>{calls.push(photo.id);if(photo.id==='block')await new Promise(resolve=>{unblock=resolve;});return {url:photo.id,bytes:1};}});
+  const blocker=cache.get({id:'block'});await Promise.resolve();
+  const intro=cache.get({id:'shared'},{isRelevant:()=>first});first=false;
+  const gallery=cache.get({id:'shared'},{isRelevant:()=>true});unblock();
+  await blocker;assert.equal(await intro,'shared');assert.equal(await gallery,'shared');assert.deepEqual(calls,['block','shared']);cache.clear();
+});
+
+test('重试照片不会提前回收仍在显示的旧地址',async()=>{
+  const revoked=[];let generation=0;const cache=createPhotoCache({dispose:url=>revoked.push(url),load:async()=>({url:'url-'+(++generation),bytes:1})});
+  const release=cache.retain('photo');await cache.get({id:'photo'});cache.invalidate('photo');assert.deepEqual(revoked,[]);
+  assert.equal(await cache.get({id:'photo'}),'url-2');release();cache.trim();assert.deepEqual(revoked,['url-1']);cache.clear();
+});

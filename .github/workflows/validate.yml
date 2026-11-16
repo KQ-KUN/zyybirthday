@@ -16,3 +16,4 @@ jobs:
       - run: node --test tools/*.test.mjs
       - run: node --check unlock.js
       - run: node --check app.js
+      - run: node tools/build-service-worker.mjs --check

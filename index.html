@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self'; worker-src 'self' blob:; child-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self' https://cdn.jsdelivr.net https://raw.githubusercontent.com; worker-src 'self' blob:; child-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f4f0e7">
   <meta name="author" content="Kyrie Huang">
@@ -11,10 +11,10 @@
   <title>地图相册</title>
   <link rel="icon" href="assets/album-mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="vendor/maplibre-gl.css">
-  <link rel="stylesheet" href="style.css?v=20261116-15-style">
-  <link rel="stylesheet" href="atlas.css?v=20261116-15">
-  <link rel="stylesheet" href="birthday-intro.css?v=20261116-15">
-  <script src="unlock.js?v=20261116-15" type="module"></script>
+  <link rel="stylesheet" href="style.css?v=20261116-16-style">
+  <link rel="stylesheet" href="atlas.css?v=20261116-16">
+  <link rel="stylesheet" href="birthday-intro.css?v=20261116-16">
+  <script src="unlock.js?v=20261116-16" type="module"></script>
 </head>
 <body>
   <section id="unlock-screen" class="unlock-screen" aria-labelledby="unlock-title">
@@ -33,18 +33,18 @@
     <aside class="album-sidebar">
     <header class="masthead">
       <div class="title-group"><div><h1>地图<br>相册</h1></div></div>
-      <div class="header-actions"><button id="upload-open" class="round-button" aria-label="添加照片与本机备份" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M4 12h16"/></svg></button><button id="map-home" class="round-button" aria-label="查看所有地点"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h5m8 0h5v-5"/></svg></button><span id="demo-badge" class="demo-badge">演示版</span><button id="credits-open" class="round-button" aria-label="照片来源" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/></svg></button><button id="letter-open" class="round-button" aria-label="打开生日卡片" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></button></div>
+      <div class="header-actions"><button id="upload-open" class="round-button" aria-label="添加照片与本机备份" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M4 12h16"/></svg></button><span id="demo-badge" class="demo-badge">演示版</span><button id="credits-open" class="round-button" aria-label="照片来源" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/></svg></button><button id="letter-open" class="round-button" aria-label="打开生日卡片" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></button></div>
     </header>
 
       <div class="album-content">
     <section id="place-card" class="place-card" aria-label="选中的地点" hidden>
-      <div class="place-photo-frame"><button id="place-photo-view" class="place-photo-view" aria-label="全屏查看当前照片" aria-haspopup="dialog"><img id="place-cover" alt="" width="110" height="92"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h5m8 0h5v-5"/></svg></button></div>
+      <button id="card-photo-retry" class="card-photo-retry" hidden>重试照片</button><div class="place-photo-frame"><button id="place-photo-view" class="place-photo-view" aria-label="全屏查看当前照片" aria-haspopup="dialog"><img id="place-cover" alt="" width="110" height="92"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h5m8 0h5v-5"/></svg></button></div>
       <div id="card-photo-nav" class="card-photo-nav"><button id="card-prev" aria-label="地点上一张照片">‹</button><span id="card-counter" aria-live="polite"></span><button id="card-next" aria-label="地点下一张照片">›</button></div>
       <button id="place-card-open" class="place-card-open"><span class="place-copy"><span id="place-region" class="eyebrow"></span><strong id="place-name"></strong><span id="place-count"></span></span><span id="place-index" class="place-index" aria-hidden="true"></span><svg class="card-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 19 5M5 5h14v14"/></svg></button>
       <button id="pin-delete" class="pin-delete" aria-label="删除当前地图钉"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v7M14 10v7"/></svg></button><button id="place-close" class="card-close" aria-label="收起地点卡片">×</button>
     </section>
 
-    <section class="album-dock" aria-label="相册浏览"><div class="dock-actions"><button id="gallery-open" class="secondary-button" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>全部照片</button><button id="tour-button" class="primary-button" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h6v15H4zM14 2h6v15h-6z"/></svg><span>按地区浏览</span></button></div></section>
+    <section class="album-dock" aria-label="相册浏览"><div class="dock-actions"><button id="gallery-open" class="secondary-button" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>全部照片</button><button id="tour-button" class="primary-button" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h6v15H4zM14 2h6v15h-6z"/></svg><span>按地区浏览</span></button></div><button id="auto-browse" class="auto-browse" aria-pressed="false">一键浏览</button></section>
       </div>
     </aside>
     <span id="live-status" class="sr-only" role="status" aria-live="polite"></span>
@@ -55,12 +55,13 @@
 
   <dialog id="photos-dialog" class="photos-dialog" aria-labelledby="photos-title">
     <header class="dialog-header"><div><p id="photos-subtitle" class="eyebrow"></p><h2 id="photos-title">照片</h2></div><button class="round-button" data-close="photos-dialog" aria-label="关闭照片，回到地图">×</button></header>
+    <button id="grid-retry" class="grid-retry">重试未加载的照片</button>
     <div id="photo-grid" class="photo-grid"></div>
   </dialog>
 
   <dialog id="viewer" class="viewer" aria-labelledby="viewer-caption">
     <header class="viewer-header"><span id="viewer-counter"></span><button class="round-button" data-close="viewer" aria-label="关闭大图">×</button></header>
-    <div id="viewer-stage" class="viewer-stage"><img id="viewer-image" alt=""><p id="photo-error" hidden>这张照片暂时无法加载</p><button id="photo-prev" class="viewer-arrow prev" aria-label="上一张照片">‹</button><button id="photo-next" class="viewer-arrow next" aria-label="下一张照片">›</button></div>
+    <div id="viewer-stage" class="viewer-stage"><img id="viewer-image" alt=""><p id="photo-error" hidden>这张照片暂时无法加载</p><button id="photo-retry" class="photo-retry" hidden>重新加载照片</button><button id="photo-prev" class="viewer-arrow prev" aria-label="上一张照片">‹</button><button id="photo-next" class="viewer-arrow next" aria-label="下一张照片">›</button></div>
     <footer class="viewer-footer"><div id="viewer-copy"><h2 id="viewer-caption"></h2><p id="viewer-note"></p></div><button id="viewer-map" class="viewer-map">在地图上看</button><div id="viewer-dots" class="viewer-dots" aria-label="选择照片"></div></footer>
   </dialog>
 
@@ -78,7 +79,7 @@
       <button class="primary-button" type="submit">保存照片并生成地图钉</button>
     </form>
     <p id="upload-status" class="upload-status" role="status" aria-live="polite"></p>
-    <details id="removed-pins" class="removed-pins" hidden><summary id="removed-pins-summary">已移除的地点</summary><div id="removed-pins-list"></div></details><div class="backup-actions"><button id="backup-export" class="secondary-button">导出本机备份</button><button id="backup-import" class="secondary-button">导入备份</button><input id="backup-file" type="file" accept=".mapalbum,application/octet-stream" hidden></div>
+    <details id="removed-pins" class="removed-pins" hidden><summary id="removed-pins-summary">已移除的地点</summary><div id="removed-pins-list"></div></details><button id="forget-device" class="forget-device">忘记本机解锁</button><div class="backup-actions"><button id="backup-export" class="secondary-button">导出本机备份</button><button id="backup-import" class="secondary-button">导入备份</button><input id="backup-file" type="file" accept=".mapalbum,application/octet-stream" hidden></div>
   </dialog>
   <dialog id="delete-pin-dialog" class="delete-pin-dialog" aria-labelledby="delete-pin-title"><h2 id="delete-pin-title">删除地图钉？</h2><strong id="delete-pin-name"></strong><p>仅从本机地图移除，照片会保留，可在“添加照片”的已移除地点中恢复。</p><p id="pin-delete-status" role="status"></p><div class="delete-pin-actions"><button class="secondary-button" data-close="delete-pin-dialog">取消</button><button id="pin-delete-confirm" class="primary-button">移除此地图钉</button></div></dialog>
   <noscript><div class="noscript-message">请开启浏览器的 JavaScript 后查看地图相册。</div></noscript>

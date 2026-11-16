@@ -1,12 +1,13 @@
 // 总超时覆盖响应正文停滞，避免解锁一直处于等待状态。
-export async function downloadBytes(url,{timeoutMs=30000,onProgress=()=>{},fetchImpl=fetch,maxBytes=100*1024*1024}={}) {
+export async function downloadBytes(url,{timeoutMs=30000,onProgress=()=>{},fetchImpl=fetch,maxBytes=100*1024*1024,signal,cache='default'}={}) {
   const controller=new AbortController();
+  const abort=()=>controller.abort();if(signal?.aborted)abort();else signal?.addEventListener('abort',abort,{once:true});
   let timer;
   const timeout=new Promise((_,reject)=>{
     timer=setTimeout(()=>{controller.abort();reject(new Error('相册下载超时，请检查网络后重试。'));},timeoutMs);
   });
   const request=(async()=>{
-    const response=await fetchImpl(url,{signal:controller.signal,credentials:'omit',cache:'default'});
+    const response=await fetchImpl(url,{signal:controller.signal,credentials:'omit',cache});
     if(!response.ok)throw new Error('相册下载失败，请检查网络后重试。');
     const total=Number(response.headers.get('content-length'))||0;
     if(total>maxBytes)throw new Error('相册文件过大。');
@@ -26,7 +27,7 @@ export async function downloadBytes(url,{timeoutMs=30000,onProgress=()=>{},fetch
     } finally {reader.releaseLock();}
   })();
   try{return await Promise.race([request,timeout]);}
-  finally{clearTimeout(timer);controller.abort();}
+  finally{clearTimeout(timer);signal?.removeEventListener('abort',abort);controller.abort();}
 }
 
 const scripts=new Map();

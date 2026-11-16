@@ -1,4 +1,4 @@
-import {mosaicPhotos,createPhotoMosaic} from './photo-mosaic.js?v=20261116-15';
+import {mosaicPhotos,createPhotoMosaic} from './photo-mosaic.js?v=20261116-16';
 const running=new WeakMap();
 
 export function birthdayLabel(value){
@@ -7,7 +7,7 @@ export function birthdayLabel(value){
   return Number.isFinite(date.getTime())&&date.toISOString().slice(0,10)===value?value.replaceAll('-',' · '):'';
 }
 
-// 跳过、自动结束、返回关闭共用一个可取消的生命周期，晚到的照片不能重新打开动画。
+// 主动关闭共用一个可取消的生命周期，晚到的照片不能重新打开动画。
 export function createIntroTimeline({onFinish,onReveal=()=>{},onConverge=()=>{},reduced=false,setTimer=setTimeout,clearTimer=clearTimeout}){
   let active=true;
   const timers=[];
@@ -18,7 +18,7 @@ export function createIntroTimeline({onFinish,onReveal=()=>{},onConverge=()=>{},
   return {finish,dispose:stop,get active(){return active;}};
 }
 
-export function playBirthdayIntro(dialog,{album,loadPhoto,onFinish,onDispose=()=>{}}){
+export function playBirthdayIntro(dialog,{album,loadPhoto,onFinish,onOpenPhoto=()=>{},onDispose=()=>{}}){
   running.get(dialog)?.();
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
   dialog.dataset.reduced=String(reduced);dialog.dataset.state='playing';dialog.dataset.phase='opening';
@@ -28,10 +28,13 @@ export function playBirthdayIntro(dialog,{album,loadPhoto,onFinish,onDispose=()=
   const canvas=document.createElement('canvas');canvas.className='intro-mosaic';canvas.setAttribute('aria-label','照片拼成的生日快乐');canvas.setAttribute('role','img');
   const date=document.createElement('p');date.className='intro-date';date.textContent=birthdayLabel(album.celebration?.birthDate);date.hidden=!date.textContent;
   const wish=document.createElement('p');wish.className='intro-wish';wish.textContent='愿你自在，常有欢喜。';
-  page.append(skip,heading,canvas,date,wish);dialog.replaceChildren(page);
-  const disposeMosaic=createPhotoMosaic(canvas,{photos:mosaicPhotos(album.places),loadPhoto,reduced});
+  const links=document.createElement('div');links.className='intro-photo-links';links.setAttribute('aria-label','打开拼字中的照片');
+  const photos=mosaicPhotos(album.places),buttons=new Map();
+  for(const [index,photo] of photos.entries()){const button=document.createElement('button');button.type='button';button.setAttribute('aria-label',`打开拼字照片 ${index+1}：${photo.alt}`);button.textContent=String(index+1);button.addEventListener('click',()=>onOpenPhoto(photo,photos,button));buttons.set(photo.id,button);links.append(button);}
+  page.append(skip,heading,canvas,links,date,wish);dialog.replaceChildren(page);
+  const disposeMosaic=createPhotoMosaic(canvas,{photos,loadPhoto,reduced,onOpenPhoto,onPhotoReady:(photo,url)=>{const img=document.createElement('img');img.src=url;img.alt='';buttons.get(photo.id)?.replaceChildren(img);}});
   const timeline=createIntroTimeline({reduced,onFinish,onReveal:()=>{dialog.dataset.phase='photos';},onConverge:()=>{dialog.dataset.phase='held';}});
-  const dispose=()=>{timeline.dispose();disposeMosaic();dialog.dataset.state='finished';dialog.removeEventListener('close',closed);skip.removeEventListener('click',timeline.finish);running.delete(dialog);onDispose();};
+  const dispose=()=>{timeline.dispose();disposeMosaic();links.querySelectorAll('img').forEach(img=>img.removeAttribute('src'));dialog.dataset.state='finished';dialog.removeEventListener('close',closed);skip.removeEventListener('click',timeline.finish);running.delete(dialog);onDispose();};
   const closed=()=>{if(!dialog.open)dispose();};
   skip.addEventListener('click',timeline.finish);dialog.addEventListener('close',closed);running.set(dialog,dispose);skip.focus();
   return {finish:timeline.finish,dispose};

@@ -40,21 +40,28 @@ export function crossfade(element,update,{duration=280,reduced=false,contain=fal
 }
 
 export function createImageSwap(image,{reduced=false,contain=false}={}) {
-  const latest=createLatestTask();
+  let revision=0,currentRelease=null,pendingResolve=null;
   return {
-    cancel:()=>latest.cancel(),
+    cancel(){revision++;pendingResolve?.(false);pendingResolve=null;image.removeAttribute('src');currentRelease?.();currentRelease=null;},
     show(photo,load,onCommit=()=>{},onError=()=>{}){
-      const release=load.retain?.(photo)||(()=>{});
-      return latest.run(async()=>{
-        const url=await load(photo);
-        const ready=new Image();ready.src=url;
-        if(ready.decode)await ready.decode();
-        else if(!ready.complete)await new Promise((resolve,reject)=>{ready.onload=resolve;ready.onerror=reject;});
-        return url;
-      },url=>{
-        if(image.getAttribute('src')!==url)crossfade(image,()=>{image.src=url;image.alt=photo.alt||'';},{reduced,contain});
-        onCommit();
-      },onError).finally(release);
+      const ticket=++revision;pendingResolve?.(false);let shown=false;
+      const first=new Promise(resolve=>{pendingResolve=resolve;});
+      async function stage(source,quality){
+        const release=load.retain?.(source)||(()=>{});let kept=false;
+        try{
+          const url=await load(source,{isRelevant:()=>ticket===revision});const ready=new Image();ready.src=url;await ready.decode();if(ticket!==revision)return false;
+          if(image.getAttribute('src')!==url)crossfade(image,()=>{image.src=url;image.alt=photo.alt||'';image.dataset.quality=quality;},{reduced,contain});
+          const previous=currentRelease;currentRelease=release;kept=true;previous?.();shown=true;onCommit(quality);pendingResolve?.(true);pendingResolve=null;return true;
+        }finally{if(!kept)release();}
+      }
+      (async()=>{
+        let previewError;
+        if(photo.thumbnail)try{await stage(photo.thumbnail,'preview');}catch(error){previewError=error;}
+        if(ticket!==revision)return;
+        try{await stage(photo,'full');}
+        catch(error){if(ticket!==revision)return;onError(error||previewError,{hasPreview:shown});pendingResolve?.(shown);pendingResolve=null;}
+      })();
+      return first;
     }
   };
 }
