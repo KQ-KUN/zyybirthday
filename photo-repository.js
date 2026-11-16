@@ -1,5 +1,5 @@
-import {downloadBytes} from './network.js?v=20261116-23';
-import {openPhoto} from './crypto.js?v=20261116-23';
+import {downloadBytes} from './network.js?v=20261116-24';
+import {openPhoto} from './crypto.js?v=20261116-24';
 
 export function photoRoutes(photo){
   if(!/^sealed\/[a-f0-9-]{36}\.bin$/.test(photo.src)||!photo.src.endsWith('/'+photo.id+'.bin'))throw new Error('照片路径无效');
