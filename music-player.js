@@ -1,4 +1,4 @@
-import {createMusicController} from './music-controller.js?v=20261117-27';
+import {createMusicController} from './music-controller.js?v=20261117-28';
 const speaker='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4ZM17 8a6 6 0 0 1 0 8M20 5a10 10 0 0 1 0 14"/></svg>';
 const silent='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4ZM17 9l5 6m0-6-5 6"/></svg>';
 export function mountMusicPlayer({tracks,root}){
@@ -18,9 +18,9 @@ export function mountMusicPlayer({tracks,root}){
   mute.addEventListener('click',()=>{const state=controller.snapshot();if(!state.playing){controller.setMuted(false);controller.play();}else controller.setMuted(!state.muted);});
   find('.music-next').addEventListener('click',()=>controller.next());
   function gesture(event){if(event.isTrusted&&!element.contains(event.target)){element.open=false;controller.startFromGesture();}}
-  document.addEventListener('pointerdown',gesture,true);document.addEventListener('keydown',gesture,true);
+  document.addEventListener('pointerdown',gesture,true);document.addEventListener('click',gesture,true);document.addEventListener('touchend',gesture,true);document.addEventListener('keydown',gesture,true);
   element.addEventListener('keydown',event=>{if(event.key==='Escape'&&element.open){event.preventDefault();event.stopPropagation();element.open=false;trigger.focus();}});
   root.append(element);
   controller.startAutomatically();
-  return {dispose(){document.removeEventListener('pointerdown',gesture,true);document.removeEventListener('keydown',gesture,true);controller.dispose();audio.remove();element.remove();}};
+  return {dispose(){document.removeEventListener('pointerdown',gesture,true);document.removeEventListener('click',gesture,true);document.removeEventListener('touchend',gesture,true);document.removeEventListener('keydown',gesture,true);controller.dispose();audio.remove();element.remove();}};
 }

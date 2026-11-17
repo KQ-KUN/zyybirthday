@@ -1,18 +1,18 @@
-import {createLazyPhotos} from './lazy-photos.js?v=20261117-27';
-import {createAutoBrowse} from './auto-browse.js?v=20261117-27';
-import {layoutPins,applyPinLabel} from './pin-layout.js?v=20261117-27';
-import {administrativeLabels} from './administrative-areas.js?v=20261117-27';
-import {pushpinSvg} from './pushpin.js?v=20261117-27';
-import {regionLabels} from './region-labels.js?v=20261117-27';
-import {createImageSwap,crossfade,cameraEase,regionMovement} from './transitions.js?v=20261117-27';
-import {createPaperMap,localStyle} from './paper-map.js?v=20261117-27';
-import {loadScript} from './network.js?v=20261117-27';
-import {createViewHistory} from './view-history.js?v=20261117-27';
-import {playBirthdayIntro} from './birthday-intro.js?v=20261117-27';
-import {mergeLocalPlaces} from './local-album.js?v=20261117-27';
-import {bindLocalUpload,uploadLocations} from './local-upload.js?v=20261117-27';
-import {mountMusicPlayer} from './music-player.js?v=20261117-27';
-import {musicTracks} from './music-tracks.js?v=20261117-27';
+import {createLazyPhotos} from './lazy-photos.js?v=20261117-28';
+import {createAutoBrowse} from './auto-browse.js?v=20261117-28';
+import {layoutPins,applyPinLabel} from './pin-layout.js?v=20261117-28';
+import {administrativeLabels} from './administrative-areas.js?v=20261117-28';
+import {pushpinSvg} from './pushpin.js?v=20261117-28';
+import {regionLabels} from './region-labels.js?v=20261117-28';
+import {createImageSwap,crossfade,cameraEase,regionMovement} from './transitions.js?v=20261117-28';
+import {createPaperMap,localStyle} from './paper-map.js?v=20261117-28';
+import {loadScript} from './network.js?v=20261117-28';
+import {createViewHistory} from './view-history.js?v=20261117-28';
+import {playBirthdayIntro} from './birthday-intro.js?v=20261117-28';
+import {mergeLocalPlaces} from './local-album.js?v=20261117-28';
+import {bindLocalUpload,uploadLocations} from './local-upload.js?v=20261117-28';
+import {mountMusicPlayer} from './music-player.js?v=20261117-28';
+import {musicTracks} from './music-tracks.js?v=20261117-28';
 
 /* 地图位置只用于整理回忆，不用于定位或导航。 */
 'use strict';
@@ -316,7 +316,7 @@ export function startAlbum() {
     if(mapLoading)return;mapLoading=true;
     const paper=map;
     try {
-      await loadScript('vendor/maplibre-gl.js?v=20261117-27-map',{timeoutMs:8000});
+      await loadScript('vendor/maplibre-gl.js?v=20261117-28-map',{timeoutMs:8000});
       if(!window.maplibregl)throw new Error('Map engine unavailable');
       const engine=new maplibregl.Map({container:'map',style:localStyle,minZoom:1.5,maxZoom:12,attributionControl:false,renderWorldCopies:false,maxPitch:68,pixelRatio:Math.min(window.devicePixelRatio||1,1.5),canvasContextAttributes:{antialias:false},...paper.getCamera()});
       engine.dragRotate.disable();engine.touchZoomRotate.disableRotation();

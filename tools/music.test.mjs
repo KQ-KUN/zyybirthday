@@ -30,5 +30,5 @@ test('静音保持播放进度，切歌后仍静音，三个曲目按加减顺�
 });
 
 test('默认尝试播放，浏览器拦截后保留首次触摸自动重试，不需再手动打开音乐',async()=>{
-  const audio=new AudioFixture();audio.denied=true;const player=createMusicController({audio,tracks});assert.equal(await player.startAutomatically(),false);assert.equal(player.snapshot().status,'blocked');audio.denied=false;await player.startFromGesture();assert.equal(audio.paused,false);assert.equal(audio.src,tracks[0].src);player.dispose();
+  const audio=new AudioFixture();audio.denied=true;const player=createMusicController({audio,tracks});assert.equal(await player.startAutomatically(),false);assert.equal(player.snapshot().status,'blocked');await player.startFromGesture();assert.equal(player.snapshot().status,'blocked');audio.denied=false;await player.startFromGesture();assert.equal(audio.paused,false);assert.equal(audio.src,tracks[0].src);player.dispose();
 });

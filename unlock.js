@@ -1,9 +1,10 @@
-import {createDeviceStore} from './device-store.js?v=20261117-27';
-import {createPhotoRepository} from './photo-repository.js?v=20261117-27';
-import {createPhotoCache} from './photo-cache.js?v=20261117-27';
-import {openAlbum,deriveKey,decryptAlbumWithKey,normalizeName,normalizeBirthday} from './crypto.js?v=20261117-27';
-import {startAlbum} from './app.js?v=20261117-27';
-import {createLocalAlbum,mergeLocalPlaces} from './local-album.js?v=20261117-27';
+import {createDeviceStore} from './device-store.js?v=20261117-28';
+import {createPhotoRepository} from './photo-repository.js?v=20261117-28';
+import {createPhotoCache} from './photo-cache.js?v=20261117-28';
+import {openAlbum,deriveKey,decryptAlbumWithKey,normalizeName,normalizeBirthday} from './crypto.js?v=20261117-28';
+import {startAlbum} from './app.js?v=20261117-28';
+import {createLocalAlbum,mergeLocalPlaces} from './local-album.js?v=20261117-28';
+import {createOfflineDownload,ensureOfflineShell} from './offline-download.js?v=20261117-28';
 
 const form=document.getElementById('unlock-form');
 const error=document.getElementById('unlock-error');
@@ -28,7 +29,9 @@ async function hydrate(payload,key) {
   loadPhoto.invalidate=photo=>cache.invalidate(photo.id);
   loadPhoto.hasOpeningPreview=photo=>repository.hasOpeningPreview(photo);
   const allPlaces=mergeLocalPlaces(basePlaces,additions);
+  const offlineDownload=createOfflineDownload();offlineDownload.restore();
   window.memoryAlbum={album:{...payload.album,places:allPlaces.filter(place=>!hiddenIds.includes(place.id))},allPlaces,hiddenIds,basePlaces,localStore,localWarning,forgetDevice:()=>deviceStore.forget(envelope.salt),credits:payload.credits,loadPhoto,trimPhotos:cache.trim};
+  window.memoryAlbum.offlineDownload=offlineDownload;
   window.addEventListener('pagehide',()=>{repository.stop();cache.clear();delete window.memoryAlbum;},{once:true});
   setTimeout(()=>repository.warmThumbnails(allPlaces).catch(()=>{}),1500);
   return ()=>cache.clear();
@@ -40,7 +43,7 @@ async function enter(payload,key){
   try{startAlbum();}
   catch(error){document.getElementById('unlock-screen').hidden=false;document.getElementById('app').hidden=true;document.body.classList.remove('album-unlocked');disposePhotos();delete window.memoryAlbum;throw error;}
   document.body.dataset.unlockMode='device';
-  if('serviceWorker' in navigator)setTimeout(()=>navigator.serviceWorker.register('service-worker.js?v=20261117-27').then(()=>navigator.serviceWorker.ready).then(()=>{document.body.dataset.offlineShell='ready';}).catch(()=>{}),2500);
+  if('serviceWorker' in navigator)ensureOfflineShell().then(()=>{document.body.dataset.offlineShell='ready';}).catch(()=>{});
 }
 form.addEventListener('submit',async(event)=>{
   event.preventDefault();if(busy)return;error.textContent='';

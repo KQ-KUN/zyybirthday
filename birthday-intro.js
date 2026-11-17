@@ -1,5 +1,5 @@
-import {mosaicPhotos,createPhotoMosaic} from './photo-mosaic.js?v=20261117-27';
-import {ribbonPhotos,createPhotoRibbon} from './photo-ribbon.js?v=20261117-27';
+import {mosaicPhotos,createPhotoMosaic} from './photo-mosaic.js?v=20261117-28';
+import {ribbonPhotos,createPhotoRibbon} from './photo-ribbon.js?v=20261117-28';
 const running=new WeakMap();
 
 export function birthdayLabel(value){
@@ -31,10 +31,12 @@ export function playBirthdayIntro(dialog,{album,loadPhoto,onFinish,onOpenPhoto=(
   const wish=document.createElement('p');wish.className='intro-wish';wish.textContent='愿你自在，常有欢喜。';
   const photos=mosaicPhotos(album.places,8,loadPhoto.hasOpeningPreview);
   const ribbon=createPhotoRibbon({photos:ribbonPhotos(album.places),loadPhoto,reduced,onOpenPhoto,trim:()=>window.memoryAlbum?.trimPhotos()});
-  page.append(skip,heading,canvas,ribbon.element,date,wish);dialog.replaceChildren(page);
+  const download=document.createElement('button');download.className='offline-download';download.type='button';download.setAttribute('aria-live','polite');
+  const unbindDownload=window.memoryAlbum?.offlineDownload?.bind(download)||(()=>{});download.hidden=!window.memoryAlbum?.offlineDownload;
+  page.append(skip,heading,canvas,ribbon.element,date,wish,download);dialog.replaceChildren(page);
   const disposeMosaic=createPhotoMosaic(canvas,{photos,loadPhoto,reduced,onOpenPhoto});
   const timeline=createIntroTimeline({reduced,onFinish,onReveal:()=>{dialog.dataset.phase='photos';},onConverge:()=>{dialog.dataset.phase='held';}});
-  const dispose=()=>{timeline.dispose();disposeMosaic();ribbon.dispose();dialog.dataset.state='finished';dialog.removeEventListener('close',closed);skip.removeEventListener('click',timeline.finish);running.delete(dialog);onDispose();};
+  const dispose=()=>{unbindDownload();timeline.dispose();disposeMosaic();ribbon.dispose();dialog.dataset.state='finished';dialog.removeEventListener('close',closed);skip.removeEventListener('click',timeline.finish);running.delete(dialog);onDispose();};
   const closed=()=>{if(!dialog.open)dispose();};
   skip.addEventListener('click',timeline.finish);dialog.addEventListener('close',closed);running.set(dialog,dispose);skip.focus();
   return {finish:timeline.finish,dispose};

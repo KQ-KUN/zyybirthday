@@ -25,3 +25,8 @@
 .intro-photo-links .ribbon-toggle{width:44px;height:44px;flex:none;display:grid;place-items:center;border:1px solid #a9b69c;border-radius:50%;background:#f7f4e9;color:#173d32}
 .ribbon-toggle svg{width:18px;height:18px}
 .intro-photo-links[data-ready="false"] .ribbon-window{visibility:hidden}
+.intro-page{gap:clamp(9px,1.8dvh,16px);padding-bottom:max(30px,env(safe-area-inset-bottom))}
+.intro-mosaic{max-width:min(300px,calc((100dvh - 340px)*16/17))}
+.offline-download{position:relative;z-index:2;flex:none;min-height:44px;min-width:160px;max-width:100%;padding:10px 24px;border:1px solid #315747;border-radius:24px;background:#173d32;color:#fff8e8;font:500 14px/1.5 var(--sans);touch-action:manipulation}
+.offline-download:disabled{opacity:1;background:#e1e7d9;color:#173d32;border-color:#bac8ae}
+.offline-download:focus-visible{outline:2px solid #315747;outline-offset:3px}

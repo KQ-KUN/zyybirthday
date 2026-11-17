@@ -1,5 +1,6 @@
-import {downloadBytes} from './network.js?v=20261117-27';
-import {openPhoto} from './crypto.js?v=20261117-27';
+import {downloadBytes} from './network.js?v=20261117-28';
+import {openPhoto} from './crypto.js?v=20261117-28';
+import {offlineResponse} from './offline-cache.js?v=20261117-28';
 
 export function photoRoutes(photo){
   if(!/^sealed\/[a-f0-9-]{36}\.bin$/.test(photo.src)||!photo.src.endsWith('/'+photo.id+'.bin'))throw new Error('照片路径无效');
@@ -26,6 +27,8 @@ export function createPhotoRepository({key,store,localStore,download,delays,open
   async function read(photo){
     photoRoutes(photo);
     if(photo.local)return verify(await localStore.readPhoto(photo),photo.id);
+    const offline=await offlineResponse(photo.src);
+    if(offline)try{return await verify(new Uint8Array(await offline.arrayBuffer()),photo.id);}catch{}
     if(embedded.has(photo.id))try{return await verify(Uint8Array.from(atob(embedded.get(photo.id)),value=>value.charCodeAt(0)),photo.id);}catch{embedded.delete(photo.id);}
     let cached;try{cached=await store.getPhoto(photo.id);}catch{}
     if(cached)try{return await verify(cached,photo.id);}catch{try{await store.deletePhoto(photo.id);}catch{}}

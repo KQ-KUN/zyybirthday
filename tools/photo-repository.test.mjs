@@ -3,6 +3,16 @@ import assert from 'node:assert/strict';
 import {createPhotoRepository,firstVerifiedPhoto,photoRoutes} from '../photo-repository.js';
 import {sealPhoto,encryptAlbum,deriveKey,decryptAlbumWithKey} from '../crypto.js';
 const id='12345678-1234-1234-1234-123456789abc',photo={id,src:'sealed/'+id+'.bin'},jpeg=new Uint8Array([255,216,1,2,3,255,217]);
+test('完整离线包中的照片直接解密，不访问照片线路或旧 IndexedDB 缓存',async()=>{
+  const key=await crypto.subtle.generateKey({name:'AES-GCM',length:256},false,['encrypt','decrypt']),sealed=await sealPhoto(jpeg,key,id);
+  const before=Object.fromEntries(['caches','location'].map(name=>[name,Object.getOwnPropertyDescriptor(globalThis,name)]));let calls=0;
+  try{
+    Object.defineProperty(globalThis,'location',{configurable:true,value:{href:'https://fixture.test/album/'}});
+    Object.defineProperty(globalThis,'caches',{configurable:true,value:{open:async()=>({match:async()=>new Response(sealed)})}});
+    const repository=createPhotoRepository({key,store:{getPhoto(){throw new Error('must not use old cache');}},download:async()=>{calls++;throw new Error('offline');}});
+    assert.deepEqual(await repository.read(photo),jpeg);assert.equal(calls,0);repository.stop();
+  }finally{for(const [name,descriptor] of Object.entries(before))if(descriptor)Object.defineProperty(globalThis,name,descriptor);else delete globalThis[name];}
+});
 test('照片读取优先本机密文；缓存损坏后验证备用源再更新缓存',async()=>{
   const key=await crypto.subtle.generateKey({name:'AES-GCM',length:256},false,['encrypt','decrypt']);const sealed=await sealPhoto(jpeg,key,id);let cached=sealed,calls=0,deleted=0;
   const store={getPhoto:async()=>cached,deletePhoto:async()=>{deleted++;cached=null;},putPhoto:async(_,bytes)=>{cached=bytes;}};

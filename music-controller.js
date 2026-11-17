@@ -10,7 +10,7 @@ export function createMusicController({audio,tracks,preference={},onChange=()=>{
   async function play(){
     autoStart=false;wanted=true;const ticket=++revision;source();status='loading';save(true);emit();
     try{await audio.play();if(ticket!==revision)return false;status='playing';emit();return true;}
-    catch(error){if(ticket!==revision)return false;wanted=false;status=error.name==='NotAllowedError'?'blocked':'error';emit();return false;}
+    catch(error){if(ticket!==revision)return false;wanted=false;status=error.name==='NotAllowedError'?'blocked':'error';if(status==='blocked')autoStart=true;emit();return false;}
   }
   async function startAutomatically(){const started=await play();if(!started&&status==='blocked')autoStart=true;return started;}
   function pause(){autoStart=false;wanted=false;revision++;audio.pause();status='paused';save(false);emit();}
