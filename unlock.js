@@ -1,10 +1,10 @@
-import {createDeviceStore} from './device-store.js?v=20261117-28';
-import {createPhotoRepository} from './photo-repository.js?v=20261117-28';
-import {createPhotoCache} from './photo-cache.js?v=20261117-28';
-import {openAlbum,deriveKey,decryptAlbumWithKey,normalizeName,normalizeBirthday} from './crypto.js?v=20261117-28';
-import {startAlbum} from './app.js?v=20261117-28';
-import {createLocalAlbum,mergeLocalPlaces} from './local-album.js?v=20261117-28';
-import {createOfflineDownload,ensureOfflineShell} from './offline-download.js?v=20261117-28';
+import {createDeviceStore} from './device-store.js?v=20261117-29';
+import {createPhotoRepository} from './photo-repository.js?v=20261117-29';
+import {createPhotoCache} from './photo-cache.js?v=20261117-29';
+import {openAlbum,deriveKey,decryptAlbumWithKey,normalizeName,normalizeBirthday} from './crypto.js?v=20261117-29';
+import {startAlbum} from './app.js?v=20261117-29';
+import {createLocalAlbum,mergeLocalPlaces} from './local-album.js?v=20261117-29';
+import {createOfflineDownload,ensureOfflineShell} from './offline-download.js?v=20261117-29';
 
 const form=document.getElementById('unlock-form');
 const error=document.getElementById('unlock-error');

@@ -1,7 +1,7 @@
-import {OFFLINE_CACHE} from './offline-cache.js?v=20261117-28';
-import {firstVerifiedPhoto} from './photo-repository.js?v=20261117-28';
-import {downloadBytes} from './network.js?v=20261117-28';
-const VERSION='20261117-28';
+import {OFFLINE_CACHE} from './offline-cache.js?v=20261117-29';
+import {firstVerifiedPhoto} from './photo-repository.js?v=20261117-29';
+import {downloadBytes} from './network.js?v=20261117-29';
+const VERSION='20261117-29';
 export function validateManifest(value){
   if(value?.version!==VERSION||!Array.isArray(value.assets)||!value.assets.length)throw new Error('下载清单无效');
   const paths=new Set();

@@ -1,9 +1,10 @@
-import {layoutPins,applyPinLabel} from './pin-layout.js?v=20261117-28';
-import {administrativeAreas,administrativeLabels} from './administrative-areas.js?v=20261117-28';
-import {pushpinSvg} from './pushpin.js?v=20261117-28';
-import {regionLabels} from './region-labels.js?v=20261117-28';
-import {createCameraMotion,mixCamera,cameraEase} from './transitions.js?v=20261117-28';
-import {geography,land} from './geography.js?v=20261117-28';
+import {layoutPins,applyPinLabel} from './pin-layout.js?v=20261117-29';
+import {administrativeAreas,administrativeLabels} from './administrative-areas.js?v=20261117-29';
+import {pushpinSvg} from './pushpin.js?v=20261117-29';
+import {regionLabels} from './region-labels.js?v=20261117-29';
+import {createCameraMotion,mixCamera,cameraEase} from './transitions.js?v=20261117-29';
+import {geography,land} from './geography.js?v=20261117-29';
+import {bindMapGestures} from './map-gestures.js?v=20261117-29';
 
 export function project([longitude,latitude]) {
   const radians=Math.max(-85,Math.min(85,latitude))*Math.PI/180;
@@ -56,7 +57,7 @@ export function createPaperMap(container,places,onSelect,onMove) {
   }
   function draw(duration=0){
     container.dataset.view=pitch>1?'tilted':'2d';container.dataset.zoom=zoom.toFixed(2);container.dataset.pitch=String(pitch);
-    if(!motion?.isMoving()&&!drag)refreshPins();
+    if(!motion?.isMoving()&&!gestures.active)refreshPins();
     divisionGroups.city.style.display=zoom>=5?'':'none';divisionGroups.county.style.display=zoom>=7.2?'':'none';
     const scale=2**zoom/8;
     const width=surface.clientWidth*2,height=surface.clientHeight*2;
@@ -96,7 +97,7 @@ export function createPaperMap(container,places,onSelect,onMove) {
     isPaper:true,getZoom:()=>zoom,getPitch:()=>pitch,getBearing:()=>bearing,
     getCamera:()=>({center:unproject(center),zoom,pitch,bearing,padding:{...padding}}),
     updateSelection(id){selectedPin=id;for(const {button,placeId} of pins){const active=placeId===id;button.classList.toggle('is-selected',active);button.setAttribute('aria-pressed',String(active));button.setAttribute('aria-label',button.dataset.label);}},
-    stop:()=>motion.stop(),isMoving:()=>motion.isMoving()||Boolean(drag),getSource:()=>null,resize:()=>draw(),
+    stop:()=>motion.stop(),isMoving:()=>motion.isMoving()||gestures.active,getSource:()=>null,resize:()=>draw(),
     easeTo(options){
       const target=current();if(options.center)target.center=project(options.center);
       if(options.zoom!==undefined)target.zoom=Math.max(1.5,Math.min(12,options.zoom));
@@ -111,13 +112,9 @@ export function createPaperMap(container,places,onSelect,onMove) {
       target.pitch=options.pitch;target.bearing=0;motion.to(target,options.duration||0);
     },
     zoomIn(){api.easeTo({zoom:zoom+.7,duration:300});},zoomOut(){api.easeTo({zoom:zoom-.7,duration:300});},
-    remove(){motion.stop();surface.remove();window.removeEventListener('resize',resize);}
+    remove(){gestures.dispose();motion.stop();surface.remove();window.removeEventListener('resize',resize);}
   };
-  let drag;
-  surface.addEventListener('pointerdown',event=>{if(event.target.closest('button'))return;motion.stop();drag={x:event.clientX,y:event.clientY,center:[...center]};surface.setPointerCapture(event.pointerId);});
-  surface.addEventListener('pointermove',event=>{if(!drag)return;const scale=2**zoom/8;const target=current();target.center=[drag.center[0]-(event.clientX-drag.x)/scale,drag.center[1]-(event.clientY-drag.y)/scale/Math.max(.4,Math.cos(pitch*Math.PI/180))];motion.to(target,0);});
-  surface.addEventListener('pointerup',()=>{drag=null;draw();});surface.addEventListener('pointercancel',()=>{drag=null;draw();});
-  surface.addEventListener('wheel',event=>{event.preventDefault();api.easeTo({zoom:zoom-Math.sign(event.deltaY)*.3,duration:180});},{passive:false});
+  const gestures=bindMapGestures(surface,{read:current,write:(camera,duration)=>motion.to(camera,duration),stop:()=>motion.stop(),onEnd:()=>draw()});
   surface.addEventListener('keydown',event=>{
     if(event.key==='+'||event.key==='='){event.preventDefault();api.zoomIn();}if(event.key==='-'){event.preventDefault();api.zoomOut();}
     const direction={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[event.key];
