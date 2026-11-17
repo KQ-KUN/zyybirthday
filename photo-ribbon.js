@@ -1,4 +1,4 @@
-import {loadOpeningPhoto} from './opening-loader.js?v=20261116-25';
+import {loadOpeningPhoto} from './opening-loader.js?v=20261117-26';
 export function ribbonPhotos(places){return places.flatMap(place=>place.photos.map((photo,index)=>({...photo,place,index})));}
 export function ribbonWindow(start,count,total){return total?Array.from(new Set(Array.from({length:Math.min(count,total)},(_,index)=>((start+index)%total+total)%total))):[];}
 export function ribbonCycleLength(total){return total?Math.max(total,Math.ceil(12/total)*total):0;}
