@@ -1,4 +1,4 @@
-import {createMusicController} from './music-controller.js?v=20261117-26';
+import {createMusicController} from './music-controller.js?v=20261117-27';
 const speaker='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4ZM17 8a6 6 0 0 1 0 8M20 5a10 10 0 0 1 0 14"/></svg>';
 const silent='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4ZM17 9l5 6m0-6-5 6"/></svg>';
 export function mountMusicPlayer({tracks,root}){

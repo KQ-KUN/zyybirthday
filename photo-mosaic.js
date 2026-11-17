@@ -1,4 +1,4 @@
-import {loadOpeningPhoto} from './opening-loader.js?v=20261117-26';
+import {loadOpeningPhoto} from './opening-loader.js?v=20261117-27';
 function shuffle(items,random){for(let index=items.length-1;index>0;index--){const other=Math.floor(random()*(index+1));[items[index],items[other]]=[items[other],items[index]];}return items;}
 export function mosaicPhotos(places,limit=8,hasPreview,random=Math.random){
   limit=Math.max(1,Math.min(12,Math.trunc(limit)||8));
@@ -60,4 +60,4 @@ export function createPhotoMosaic(canvas,{photos,loadPhoto,reduced=false,onOpenP
   };canvas.addEventListener('click',open);
   return ()=>{active=false;controller.abort();cancelAnimationFrame(frame);canvas.removeEventListener('click',open);releases.forEach(release=>release());tiles.filter(Boolean).forEach(tile=>{tile.canvas.width=tile.canvas.height=1;});};
 }
-import {birthdayLettering} from './birthday-lettering.js?v=20261117-26';
+import {birthdayLettering} from './birthday-lettering.js?v=20261117-27';
