@@ -1,11 +1,11 @@
 {
-  "version": "20261117-29",
+  "version": "20261117-30",
   "assets": [
     {
-      "path": "index.html?v=20261117-29",
+      "path": "index.html?v=20261117-30",
       "kind": "shell",
       "bytes": 234771,
-      "sha256": "8245ceec3910f126ce84860bef281d50b5c2b03d3f3e53fa0d25b663b12fcbd8",
+      "sha256": "dcf65e05df567207c47b0a35af4f4a867c3c3fd93a4601e99c251756545f4337",
       "type": "text/html"
     },
     {
@@ -37,31 +37,31 @@
       "type": "text/css"
     },
     {
-      "path": "style.css?v=20261117-29-style",
+      "path": "style.css?v=20261117-30-style",
       "kind": "shell",
       "bytes": 20148,
       "sha256": "065a4c6cd1a989a14c74584800035e1d17405ef5069f2a60176532029afb1cd6",
       "type": "text/css"
     },
     {
-      "path": "atlas.css?v=20261117-29",
+      "path": "atlas.css?v=20261117-30",
       "kind": "shell",
       "bytes": 37589,
       "sha256": "9bed4da8c20cd18fc990ee52082208e2b42dc42baca449886f3c1d6da1e68e80",
       "type": "text/css"
     },
     {
-      "path": "birthday-intro.css?v=20261117-29",
+      "path": "birthday-intro.css?v=20261117-30",
       "kind": "shell",
-      "bytes": 4330,
-      "sha256": "70cc2a72272509b31eb1ac72204be5dba09ce6453cb8532675b3bee8a7e348a8",
+      "bytes": 3905,
+      "sha256": "569a33a63360de864cf953ac79af23e2e9b3844c75aa2c9785610bab4018191d",
       "type": "text/css"
     },
     {
-      "path": "unlock.js?v=20261117-29",
+      "path": "unlock.js?v=20261117-30",
       "kind": "shell",
-      "bytes": 5812,
-      "sha256": "479027de08e2ab41e2e335fe53a86a70444d5917f78fd98bd669edf0a9d83452",
+      "bytes": 5661,
+      "sha256": "4019fb1b69a41a3339b125d0f8eddc5a4fc56dca5d4ab46eb7846b0229d13eb5",
       "type": "text/javascript"
     },
     {
@@ -72,217 +72,217 @@
       "type": "image/svg+xml"
     },
     {
-      "path": "administrative-areas.js?v=20261117-29",
+      "path": "administrative-areas.js?v=20261117-30",
       "kind": "shell",
       "bytes": 931938,
       "sha256": "8aedc731fa0f2a1a5691e6b6c21a8dea1f7077f1a33c4830ee65d1156c285674",
       "type": "text/javascript"
     },
     {
-      "path": "app.js?v=20261117-29",
+      "path": "app.js?v=20261117-30",
       "kind": "shell",
       "bytes": 36342,
-      "sha256": "eaa78a24798a44617b4a285593728776ac11bf2bed5e0f77b57557007e8896f7",
+      "sha256": "2efb7ce37b6987c0cfa35e1c59c687745d5bc52cb5794fb9a9782cf081dd6600",
       "type": "text/javascript"
     },
     {
-      "path": "auto-browse.js?v=20261117-29",
+      "path": "auto-browse.js?v=20261117-30",
       "kind": "shell",
       "bytes": 1509,
       "sha256": "43d1c4015f8b986c064d09a28230fa272c38ad56f3fdfa954c84586f27f3bfec",
       "type": "text/javascript"
     },
     {
-      "path": "birthday-intro.js?v=20261117-29",
+      "path": "birthday-intro.js?v=20261117-30",
       "kind": "shell",
-      "bytes": 3556,
-      "sha256": "6172727105d82c2481d284565b67c4649c10862ac2550eade4763c1d14471037",
+      "bytes": 3235,
+      "sha256": "59c3349fa7251d24ddfb8ef28488d7593db99f6d5807c28bdc43bfb68aa7985d",
       "type": "text/javascript"
     },
     {
-      "path": "birthday-lettering.js?v=20261117-29",
+      "path": "birthday-lettering.js?v=20261117-30",
       "kind": "shell",
       "bytes": 1283,
       "sha256": "c5329b2a1ef3ace79fe4d838f50a6f9790b5242b9f3a498715ebee9c3984a5fa",
       "type": "text/javascript"
     },
     {
-      "path": "crypto.js?v=20261117-29",
+      "path": "crypto.js?v=20261117-30",
       "kind": "shell",
       "bytes": 4912,
       "sha256": "7b731d231633a67124eb3600ec8025e47efc39d2dc36d36256102bcba66299fa",
       "type": "text/javascript"
     },
     {
-      "path": "device-store.js?v=20261117-29",
+      "path": "device-store.js?v=20261117-30",
       "kind": "shell",
       "bytes": 4824,
       "sha256": "44956062fd87f35d34a34af44f5d9bdaa9f7199f3301e7029c8d7915e9418c38",
       "type": "text/javascript"
     },
     {
-      "path": "geography.js?v=20261117-29",
+      "path": "geography.js?v=20261117-30",
       "kind": "shell",
       "bytes": 301047,
       "sha256": "f68e8c7a6d7320cd1a0e89b6fb1405ea57d22edb78e96dd4679a95f30bd74f3c",
       "type": "text/javascript"
     },
     {
-      "path": "lazy-photos.js?v=20261117-29",
+      "path": "lazy-photos.js?v=20261117-30",
       "kind": "shell",
       "bytes": 2804,
       "sha256": "1a6a24c8ef015ad64d3d209835c91cc8e6e659bd192db0d458286b4b96c4833a",
       "type": "text/javascript"
     },
     {
-      "path": "local-album.js?v=20261117-29",
+      "path": "local-album.js?v=20261117-30",
       "kind": "shell",
       "bytes": 11853,
-      "sha256": "62ce955bd76268df0a48e9e6ba6ec7bddfba7c6ac58b9c84c11d2f2f7ea402fe",
+      "sha256": "8ddd1c5d5c9399a5de0d2dabe664cc75b71827c2138dc8a6b06e40be6ed9e161",
       "type": "text/javascript"
     },
     {
-      "path": "local-upload.js?v=20261117-29",
+      "path": "local-upload.js?v=20261117-30",
       "kind": "shell",
       "bytes": 9574,
-      "sha256": "5853cab15b700bd3e7d8e6610d1e6569e804384b2dbeb4ec68938867fa402d3e",
+      "sha256": "e6c1560ea92dfc55509b15e876f639b4a6adf456c8a616bcce41a0768d85986f",
       "type": "text/javascript"
     },
     {
-      "path": "location-index.js?v=20261117-29",
+      "path": "location-index.js?v=20261117-30",
       "kind": "shell",
       "bytes": 84967,
       "sha256": "7720553260560ec9afbab4b1730ab99d8a4f7a7bb20d471515bc9f53a95db19b",
       "type": "text/javascript"
     },
     {
-      "path": "map-gestures.js?v=20261117-29",
+      "path": "map-gestures.js?v=20261117-30",
       "kind": "shell",
       "bytes": 2487,
       "sha256": "8876ebb8df8f0ee9142861042fa1398caa4481b5ef2555b32fb66ccf77f09b39",
       "type": "text/javascript"
     },
     {
-      "path": "music-controller.js?v=20261117-29",
+      "path": "music-controller.js?v=20261117-30",
       "kind": "shell",
       "bytes": 3006,
       "sha256": "bceb785bef6724509c712764fb80a3fba014fb17227a6667f5b0c3990c8de6bf",
       "type": "text/javascript"
     },
     {
-      "path": "music-player.js?v=20261117-29",
+      "path": "music-player.js?v=20261117-30",
       "kind": "shell",
       "bytes": 3428,
-      "sha256": "6c233b533dbede65c659809dca349b0e271cb35262c4e763c277b42445070cdd",
+      "sha256": "445140fcfb85edacaddf1fec7854a1e2b3bb04423624ee2c579d4fdd70fa030d",
       "type": "text/javascript"
     },
     {
-      "path": "music-tracks.js?v=20261117-29",
+      "path": "music-tracks.js?v=20261117-30",
       "kind": "shell",
       "bytes": 398,
       "sha256": "89031a87c3d28783f359ef7198b394083317b702424fdb08829807756fd63732",
       "type": "text/javascript"
     },
     {
-      "path": "network.js?v=20261117-29",
+      "path": "network.js?v=20261117-30",
       "kind": "shell",
       "bytes": 2612,
       "sha256": "6d185e15ae3eea72d5db67f28f23c2ef9f8bb5647fdf229bdfac41352d901df5",
       "type": "text/javascript"
     },
     {
-      "path": "offline-cache.js?v=20261117-29",
+      "path": "offline-cache.js?v=20261117-30",
       "kind": "shell",
       "bytes": 259,
       "sha256": "7fde2a72fc878ba75ac87a3af79df784a956a32f54d95dad601774a10842cc2c",
       "type": "text/javascript"
     },
     {
-      "path": "offline-download.js?v=20261117-29",
+      "path": "offline-download.js?v=20261117-30",
       "kind": "shell",
       "bytes": 6335,
-      "sha256": "bba47696db93f40a20a35f80ed526943a1d01b0e78a65a65f1b270b2686a6a36",
+      "sha256": "b9c4c2ef43235de5fc0107f05d75f27ed62b17cc6221d5cbc518a6523dfc4de9",
       "type": "text/javascript"
     },
     {
-      "path": "offline-worker.js?v=20261117-29",
+      "path": "offline-worker.js?v=20261117-30",
       "kind": "shell",
       "bytes": 2696,
       "sha256": "6f6b236f95aaa62224a7d7685f59d6c33727cbff930d8263fe73ad66dc641a9f",
       "type": "text/javascript"
     },
     {
-      "path": "opening-loader.js?v=20261117-29",
+      "path": "opening-loader.js?v=20261117-30",
       "kind": "shell",
       "bytes": 1324,
       "sha256": "8e3b3a2a9a0f83063bfcc36ae8ba563e30cef2a4bfa644c8253def3afd6ae54b",
       "type": "text/javascript"
     },
     {
-      "path": "paper-map.js?v=20261117-29",
+      "path": "paper-map.js?v=20261117-30",
       "kind": "shell",
       "bytes": 11254,
-      "sha256": "940d1a15889e15e718646f9e151253211b6b94b700d46c812e5fbd59f8931abb",
+      "sha256": "df589305ab5e94507fb27436a52dcb0439733eeb15f5aee5d585e5a0bf467947",
       "type": "text/javascript"
     },
     {
-      "path": "photo-cache.js?v=20261117-29",
+      "path": "photo-cache.js?v=20261117-30",
       "kind": "shell",
       "bytes": 2720,
       "sha256": "8224776e3c650b51e08f16e86814dc7cacc896233891655c7f33fc00830bc97b",
       "type": "text/javascript"
     },
     {
-      "path": "photo-mosaic.js?v=20261117-29",
+      "path": "photo-mosaic.js?v=20261117-30",
       "kind": "shell",
       "bytes": 5875,
-      "sha256": "b6991c2dff2fb4e1756c9d6f3ff005c3d18d503233c573f6215f16bd7b1ca4cc",
+      "sha256": "13951f04180887cf8f4223a82e9bac666e77ad62e41f3e06d03188a0edbc320d",
       "type": "text/javascript"
     },
     {
-      "path": "photo-repository.js?v=20261117-29",
+      "path": "photo-repository.js?v=20261117-30",
       "kind": "shell",
       "bytes": 3525,
-      "sha256": "6f5a7680724443553f012142e0d08fd7fe2a213eb71523de38875628be1617e8",
+      "sha256": "dc4d05ea90318313ad2d37d1914cfd5c79fd2385769847436e17bcd1b9330391",
       "type": "text/javascript"
     },
     {
-      "path": "photo-ribbon.js?v=20261117-29",
+      "path": "photo-ribbon.js?v=20261117-30",
       "kind": "shell",
       "bytes": 8236,
-      "sha256": "73b66c81e67ffff8c263f91f1aec91345ebecff29a99346acd0b37fbc6cd1f4d",
+      "sha256": "703fd032eb457f0dbe885495c7f9128a6443a8afef2d449e06d613031e683168",
       "type": "text/javascript"
     },
     {
-      "path": "pin-layout.js?v=20261117-29",
+      "path": "pin-layout.js?v=20261117-30",
       "kind": "shell",
       "bytes": 3618,
       "sha256": "6caa0c54c9847a09c46614f1a6a6679c3e7e7f15918794793fe2556f5e9595b1",
       "type": "text/javascript"
     },
     {
-      "path": "pushpin.js?v=20261117-29",
+      "path": "pushpin.js?v=20261117-30",
       "kind": "shell",
       "bytes": 422,
       "sha256": "72a801d5578ef9545f005e73319a173af4bd8386a77c0e61169eec36d5c164d3",
       "type": "text/javascript"
     },
     {
-      "path": "region-labels.js?v=20261117-29",
+      "path": "region-labels.js?v=20261117-30",
       "kind": "shell",
       "bytes": 2592,
       "sha256": "3dddabe772f0fca03c14c2fb2479f6c0032ece1d771dc5550e257005d0ea0269",
       "type": "text/javascript"
     },
     {
-      "path": "transitions.js?v=20261117-29",
+      "path": "transitions.js?v=20261117-30",
       "kind": "shell",
       "bytes": 7869,
       "sha256": "1963eb3278671cee5148367fa321b0dab96a9872609a6853bc43a516865ab4dd",
       "type": "text/javascript"
     },
     {
-      "path": "view-history.js?v=20261117-29",
+      "path": "view-history.js?v=20261117-30",
       "kind": "shell",
       "bytes": 2380,
       "sha256": "a20a106f4747d4308b2b1d39b89ddaa0a5e0c2b97ca306f8d3b2d652308153bd",
@@ -303,7 +303,7 @@
       "type": "image/png"
     },
     {
-      "path": "vendor/maplibre-gl.js?v=20261117-29-map",
+      "path": "vendor/maplibre-gl.js?v=20261117-30-map",
       "kind": "shell",
       "bytes": 1015688,
       "sha256": "8eb4bc2a47ea76873517c9d3cd1c4c9f4172be2fa4c5aabaec038e5b92f4192f",

@@ -1,10 +1,10 @@
-import {createDeviceStore} from './device-store.js?v=20261117-29';
-import {createPhotoRepository} from './photo-repository.js?v=20261117-29';
-import {createPhotoCache} from './photo-cache.js?v=20261117-29';
-import {openAlbum,deriveKey,decryptAlbumWithKey,normalizeName,normalizeBirthday} from './crypto.js?v=20261117-29';
-import {startAlbum} from './app.js?v=20261117-29';
-import {createLocalAlbum,mergeLocalPlaces} from './local-album.js?v=20261117-29';
-import {createOfflineDownload,ensureOfflineShell} from './offline-download.js?v=20261117-29';
+import {createDeviceStore} from './device-store.js?v=20261117-30';
+import {createPhotoRepository} from './photo-repository.js?v=20261117-30';
+import {createPhotoCache} from './photo-cache.js?v=20261117-30';
+import {openAlbum,deriveKey,decryptAlbumWithKey,normalizeName,normalizeBirthday} from './crypto.js?v=20261117-30';
+import {startAlbum} from './app.js?v=20261117-30';
+import {createLocalAlbum,mergeLocalPlaces} from './local-album.js?v=20261117-30';
+import {ensureOfflineShell} from './offline-download.js?v=20261117-30';
 
 const form=document.getElementById('unlock-form');
 const error=document.getElementById('unlock-error');
@@ -29,9 +29,7 @@ async function hydrate(payload,key) {
   loadPhoto.invalidate=photo=>cache.invalidate(photo.id);
   loadPhoto.hasOpeningPreview=photo=>repository.hasOpeningPreview(photo);
   const allPlaces=mergeLocalPlaces(basePlaces,additions);
-  const offlineDownload=createOfflineDownload();offlineDownload.restore();
   window.memoryAlbum={album:{...payload.album,places:allPlaces.filter(place=>!hiddenIds.includes(place.id))},allPlaces,hiddenIds,basePlaces,localStore,localWarning,forgetDevice:()=>deviceStore.forget(envelope.salt),credits:payload.credits,loadPhoto,trimPhotos:cache.trim};
-  window.memoryAlbum.offlineDownload=offlineDownload;
   window.addEventListener('pagehide',()=>{repository.stop();cache.clear();delete window.memoryAlbum;},{once:true});
   setTimeout(()=>repository.warmThumbnails(allPlaces).catch(()=>{}),1500);
   return ()=>cache.clear();
